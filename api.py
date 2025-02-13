@@ -20,35 +20,13 @@ app.config['MYSQL_PORT'] = int(os.getenv("MYSQL_PORT"))
 
 mysql = MySQL(app)
 
+# Usado unica e exclusivamente para testes
 @app.route('/time')
 def get_current_time():
   print("teste")
   return {'time': time.time()}
 
-
-@app.route('/dadosUsuarios', methods=["GET"], strict_slashes=False)
-def get_usuarios():
-  temp = '{ "usuarios" : ['
-  temp += '{ "nome":"Lennedy C Soares" , "matricula":"1934567" , "tipoUsuario":"Docente" , "nivelGerencia":"Administrador" , "chave":"09 08 07 06"},'
-  temp += '{ "nome":"Anna" , "matricula":"123456789" , "tipoUsuario":"Discente" , "nivelGerencia":"Gerente" , "chave":""},'
-  temp += '{ "nome":"Jose" , "matricula":"3142546576879809" , "tipoUsuario":"Discente" , "nivelGerencia":"Usuario" , "chave":"09 08 33 44"},'
-  temp += '{ "nome":"João" , "matricula":"9099809" , "tipoUsuario":"Discente" , "nivelGerencia":"Usuario" , "chave":"09 08 33 44"},'    
-  temp += '{ "nome":"Peter" , "matricula":"09876543" , "tipoUsuario":"TAE" , "nivelGerencia":"Usuário" , "chave":""},'
-  temp += '{ "nome":"Anna" , "matricula":"123456789" , "tipoUsuario":"Discente" , "nivelGerencia":"Gerente" , "chave":""},'
-  temp += '{ "nome":"Jose" , "matricula":"3142546576879809" , "tipoUsuario":"Discente" , "nivelGerencia":"Usuario" , "chave":"09 08 33 44"},'
-  temp += '{ "nome":"João" , "matricula":"9099809" , "tipoUsuario":"Discente" , "nivelGerencia":"Usuario" , "chave":"09 08 33 44"},'    
-  temp += '{ "nome":"Peter" , "matricula":"09876543" , "tipoUsuario":"TAE" , "nivelGerencia":"Usuário" , "chave":""},'
-  temp += '{ "nome":"Anna" , "matricula":"123456789" , "tipoUsuario":"Discente" , "nivelGerencia":"Gerente" , "chave":""},'
-  temp += '{ "nome":"Jose" , "matricula":"3142546576879809" , "tipoUsuario":"Discente" , "nivelGerencia":"Usuario" , "chave":"09 08 33 44"},'
-  temp += '{ "nome":"João" , "matricula":"9099809" , "tipoUsuario":"Discente" , "nivelGerencia":"Usuario" , "chave":"09 08 33 44"},'    
-  temp += '{ "nome":"Peter" , "matricula":"09876543" , "tipoUsuario":"TAE" , "nivelGerencia":"Usuário" , "chave":""},'
-  temp += '{ "nome":"Fulano" , "matricula":"0987654312131415" , "tipoUsuario":"Discente" , "nivelGerencia":"Usuário" , "chave":""} ]}'    
-
-  usuarios = json.loads(temp)
-
-  return usuarios
-
-
+# Usado para retornar lista de usuários
 @app.route('/usuarios', methods = ['GET', 'POST'])
 def get_data():
   if request.method == 'GET':
@@ -61,6 +39,8 @@ def get_data():
     #print(data)
 
     return data
+
+# Usado para adicionar um novo usuário ao banco
 @app.route('/adicionarUsuarios', methods = [ 'POST'])
 def add_data():
   cur = mysql.connection.cursor()
@@ -87,7 +67,7 @@ def add_data():
   
   return {"status":"ok"}
 
-
+# Usado para adicionar uma nova sala ao banco
 @app.route('/UsuariosSalas', methods = ['GET'])
 def get_usuarios_salas():
 
@@ -116,6 +96,7 @@ def get_usuarios_salas():
 
   return temp
 
+# Usado para retornar,modificar dados de um usuário ou deletar um usuário
 @app.route('/usuario/<user_id>', methods = ['GET', 'PUT', 'DELETE'])
 def data(user_id):
 
@@ -159,6 +140,7 @@ def data(user_id):
     
     return {"status":"ok"}
 
+# Utilizado para atualizar a chave de um usuário
 @app.route('/chave/<user_id>', methods = ['PUT'])
 def setChave(user_id):
   cur = mysql.connection.cursor()
@@ -200,7 +182,7 @@ def setChave(user_id):
 
   return {"status":"ok"}
 
-
+# retorna a lista de salas
 @app.route('/salas', methods = ['GET'])
 def getSalas():
   if request.method == 'GET':
@@ -214,6 +196,7 @@ def getSalas():
 
     return data
 
+# adiciona uma nova sala ao banco
 @app.route('/adicionarSala', methods = [ 'POST'])
 def add_sala():
   cur = mysql.connection.cursor()
@@ -241,6 +224,7 @@ def add_sala():
   
   return {"status":"ok"}
 
+#modifica ou deleta uma sala do banco
 @app.route('/sala/<user_id>', methods = ['PUT', 'DELETE'])
 def delete_data(user_id):
 
@@ -254,6 +238,7 @@ def delete_data(user_id):
 
     return {"resultado":{"status":"ok"}}
 
+# Dá autorização a um usuário para entrar em determinada sala
 @app.route('/autorizarUsuario/<user_id>', methods = ['PUT', 'DELETE'])
 def autorizar_usuario(user_id):
   cur = mysql.connection.cursor()
@@ -338,6 +323,7 @@ def autorizar_usuario(user_id):
     cur.close()
     return {"status":"ok"}
 
+# retorna o número de acesso realizados hoje
 @app.route('/acessosHoje', methods = ['GET'])
 def acessos_hoje():
   current_dateTime = datetime.now()
@@ -355,6 +341,7 @@ def acessos_hoje():
 
   return {'numAcessos': numResults, 'acessos': data}
 
+# retorna o número de acessos realizados em uma data específica
 @app.route('/acessosData', methods = ['PUT'])
 def acessos_data():
   data_inicial = request.json["data_inicial"]
