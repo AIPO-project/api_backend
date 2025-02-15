@@ -6,11 +6,14 @@ from flask_mysqldb import MySQL
 import serial
 from datetime import datetime
 
+import logging
 import os #utilizado para pegar os valores que estão na variável de ambiente
 from dotenv import load_dotenv
 
 app = Flask(__name__)
 load_dotenv() #carrega as variveis de ambiente
+
+logger = logging.getLogger(__name__)
 
 app.config['MYSQL_HOST'] = os.getenv("MYSQL_HOST")
 app.config['MYSQL_USER'] = os.getenv("MYSQL_USER")
@@ -107,6 +110,7 @@ def data(user_id):
     data = [dict(zip(columns, row)) for row in cur.fetchall()]
 
     print(data)
+    logger.debug(data)
 
     return data
   if request.method == 'DELETE':
