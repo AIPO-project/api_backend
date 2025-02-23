@@ -196,10 +196,16 @@ def deleteChave(user_id):
     sql = ("UPDATE usuarios SET chave = NULL WHERE matricula='"+user_id+"'")
     print(sql)
 
-    cur.execute(sql)
-    mysql.connection.commit()
+    try:
+      cur.execute(sql)
+      mysql.connection.commit()
+    except Exception as e:
+      cur.close()
+      print(str(e))
+      return {"status": str(e)}    
 
-    return {"resultado":{"status":"ok"}}    
+
+    return {"status":"ok"}    
 
 
 # retorna a lista de salas
