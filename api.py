@@ -13,7 +13,23 @@ from dotenv import load_dotenv
 app = Flask(__name__)
 load_dotenv() #carrega as variveis de ambiente
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("AIPO_API")
+logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
+
+#logging.basicConfig(format='%(levelname)s:%(message)s', encoding='utf-8', level=logging.DEBUG)
+
+# handle para lidar com o terminal é necessário criar um handle para enviar para um arquivo
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# create formatter
+formatter = logging.Formatter('%(name)s:%(levelname)s \t\t- - %(asctime)s %(message)s', datefmt='[%m/%d/%Y %I:%M:%S]')
+
+# add formatter to ch
+ch.setFormatter(formatter)
+
+# add ch to logger
+logger.addHandler(ch)
 
 app.config['MYSQL_HOST'] = os.getenv("MYSQL_HOST")
 app.config['MYSQL_USER'] = os.getenv("MYSQL_USER")
@@ -195,6 +211,12 @@ def deleteChave(user_id):
 
     sql = ("UPDATE usuarios SET chave = NULL WHERE matricula='"+user_id+"'")
     print(sql)
+
+    logger.warning("TESTE")
+    logger.debug('This message should go to the log file')
+    logger.info('So should this')
+    logger.warning('And this, too')
+    logger.error('And non-ASCII stuff, too, like Øresund and Malmö')
 
     try:
       cur.execute(sql)
