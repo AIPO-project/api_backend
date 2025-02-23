@@ -186,6 +186,22 @@ def setChave(user_id):
 
   return {"status":"ok"}
 
+
+@app.route('/chave/<user_id>', methods = ['DELETE'])
+def deleteChave(user_id):
+  if request.method == 'DELETE':
+    cur = mysql.connection.cursor()    
+    # update usuarios set chave = NULL where matricula = '20231170150017';
+
+    sql = ("UPDATE usuarios SET chave = NULL WHERE matricula='"+user_id+"'")
+    print(sql)
+
+    cur.execute(sql)
+    mysql.connection.commit()
+
+    return {"resultado":{"status":"ok"}}    
+
+
 # retorna a lista de salas
 @app.route('/salas', methods = ['GET'])
 def getSalas():
@@ -271,24 +287,24 @@ def autorizar_usuario(user_id):
       print (i["id"])
 
         
-    sql = "select id,chave from usuarios where matricula='"+user_id+"'"
-    try:
-      cur.execute(sql)
-    except Exception as e:
-      cur.close()
-      return {"status": str(e)}
+    # sql = "select id,chave from usuarios where matricula='"+user_id+"'"
+    # try:
+    #   cur.execute(sql)
+    # except Exception as e:
+    #   cur.close()
+    #   return {"status": str(e)}
 
-    columns = [column[0] for column in cur.description]
-    data = [dict(zip(columns, row)) for row in cur.fetchall()]
-    chave = data[0]["chave"]
-    id_usuario = data[0]["id"]
+    # columns = [column[0] for column in cur.description]
+    # data = [dict(zip(columns, row)) for row in cur.fetchall()]
+    # chave = data[0]["chave"]
+    # id_usuario = data[0]["id"]
 
-    print(chave)
-    print(id_usuario)
+    # print(chave)
+    # print(id_usuario)
 
-    if chave == None:
-      print("chave null")
-      return {"status": "sem chave"}
+    # if chave == None:
+    #   print("chave null")
+    #   return {"status": "sem chave"}
 
     sql =  "insert into autorizacao (id_usuario, id_sala)" 
     sql += " values ('"+str(id_usuario)+"','"+str(salas[0]["id"])+"')"
