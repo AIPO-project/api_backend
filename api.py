@@ -14,22 +14,28 @@ app = Flask(__name__)
 load_dotenv() #carrega as variveis de ambiente
 
 logger = logging.getLogger("AIPO_API")
-logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(filename='allLogs.log', encoding='utf-8', level=logging.DEBUG)
 
-#logging.basicConfig(format='%(levelname)s:%(message)s', encoding='utf-8', level=logging.DEBUG)
+# logging.basicConfig(format='%(levelname)s:%(message)s', encoding='utf-8', level=logging.DEBUG)
 
-# handle para lidar com o terminal é necessário criar um handle para enviar para um arquivo
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+# handle para lidar com o terminal
+terminal_logger = logging.StreamHandler()
+terminal_logger.setLevel(logging.DEBUG)
+
+# handle para lidar com o arquivo
+file_logger = logging.FileHandler("api.log", encoding='utf-8')
+file_logger.setLevel(logging.WARNING)
 
 # create formatter
-formatter = logging.Formatter('%(name)s:%(levelname)s \t\t- - %(asctime)s %(message)s', datefmt='[%m/%d/%Y %I:%M:%S]')
+formatter = logging.Formatter('%(name)s:%(levelname)s \t- - %(asctime)s %(message)s', datefmt='[%d/%m/%Y %H:%M:%S]')
 
-# add formatter to ch
-ch.setFormatter(formatter)
+# add formatter to handles
+terminal_logger.setFormatter(formatter)
+file_logger.setFormatter(formatter)
 
-# add ch to logger
-logger.addHandler(ch)
+# add handles to logger
+logger.addHandler(terminal_logger)
+logger.addHandler(file_logger)
 
 app.config['MYSQL_HOST'] = os.getenv("MYSQL_HOST")
 app.config['MYSQL_USER'] = os.getenv("MYSQL_USER")
