@@ -352,7 +352,6 @@ def delete_data(user_id):
       logger.warning("falha de acesso ao banco: "+str(e))
       return {"status":str(e)}   
     sql = ("DELETE FROM salas WHERE id="+user_id)
-    # print(sql)
 
     cur.execute(sql)
     mysql.connection.commit()
@@ -505,3 +504,10 @@ def acessos_data():
   
 
   return {"status":"ok", "numResults": numResults, "Dados": data}
+
+@app.route('/login', methods = ['POST'])
+def login():
+
+  data = request.json
+  logger.debug(data)
+  return {"status":"ok", "token": "test123"}
