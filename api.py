@@ -511,8 +511,6 @@ def login():
   api_url = "https://suap.ifrn.edu.br/api/"
 
   data = request.json
-  logger.debug(data)
-  #data = {"username": user, "password": password}
 
   response = requests.post(api_url + "v2/autenticacao/token/", json=data)
 
