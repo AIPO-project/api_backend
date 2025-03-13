@@ -2,6 +2,7 @@ import time
 import json
 from flask import Flask
 from flask import request
+import requests
 from flask_mysqldb import MySQL
 import serial
 from datetime import datetime
@@ -507,7 +508,33 @@ def acessos_data():
 
 @app.route('/login', methods = ['POST'])
 def login():
+  api_url = "https://suap.ifrn.edu.br/api/"
 
   data = request.json
   logger.debug(data)
-  return {"status":"ok", "token": "test123"}
+  #data = {"username": user, "password": password}
+
+  response = requests.post(api_url + "v2/autenticacao/token/", json=data)
+
+  if response.status_code == 200:
+    token = response.json().get("access")
+    print(response.json())
+
+    headers = {
+        "Authorization": f'Bearer {token}'
+    }
+    response_meus_dados = requests.get(api_url + "v2/minhas-informacoes/meus-dados/", headers=headers)
+    if response_meus_dados.status_code == 200:
+        logger.debug("Informações do Aluno:")
+        logger.debug(response_meus_dados.json())
+        logger.debug("")
+        logger.debug(response_meus_dados.json()["matricula"])
+        logger.debug(response_meus_dados.json()["tipo_vinculo"])
+        vinculo = response_meus_dados.json()["vinculo"]
+        logger.debug(vinculo["campus"])
+    else:
+        print(f"Erro ao obter informações. Código de status: {response_meus_dados.status_code}")
+  else:
+    logger.warning("Erro na autenticação no suap. Verifique seu usuário e senha.")
+
+  return {"status":"ok", "token": token}
