@@ -510,18 +510,25 @@ def acessos_data():
 def login():
   api_url = "https://suap.ifrn.edu.br/api/"
 
-  data = request.json
-
-  response = requests.post(api_url + "v2/autenticacao/token/", json=data)
-
+  try:
+    data = request.json
+    response = requests.post(api_url + "v2/autenticacao/token/", json=data)
+  except Exception as e:
+    logger.warning(str(e))
+    return {"status": str(e)}
+  
   if response.status_code == 200:
     token = response.json().get("access")
-    print(response.json())
 
     headers = {
         "Authorization": f'Bearer {token}'
     }
-    response_meus_dados = requests.get(api_url + "v2/minhas-informacoes/meus-dados/", headers=headers)
+    try:
+      response_meus_dados = requests.get(api_url + "v2/minhas-informacoes/meus-dados/", headers=headers)
+    except Exception as e:
+      logger.warning(str(e))
+      return {"status": str(e)}
+    
     if response_meus_dados.status_code == 200:
         logger.debug("Informações do Aluno:")
         logger.debug(response_meus_dados.json())
@@ -530,9 +537,20 @@ def login():
         logger.debug(response_meus_dados.json()["tipo_vinculo"])
         vinculo = response_meus_dados.json()["vinculo"]
         logger.debug(vinculo["campus"])
+        logger.debug(token)
+
+        matricula = response_meus_dados.json()["matricula"]
+        tipo_vinculo = response_meus_dados.json()["tipo_vinculo"]
+        campus = vinculo["campus"]
+        url_foto = response_meus_dados.json()["url_foto_75x100"]
+        nome_usual = response_meus_dados.json()["nome_usual"]
+
+        return {"status":"ok", "data": {"token": token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipo_vinculo": tipo_vinculo, "foto": url_foto }}
     else:
-        print(f"Erro ao obter informações. Código de status: {response_meus_dados.status_code}")
+        logger.warning(f"Erro ao obter informações. Código de status: {response_meus_dados.status_code}")
+        return{"status":"erro"}
   else:
     logger.warning("Erro na autenticação no suap. Verifique seu usuário e senha.")
+    return{"status":"falha de comunicação com SUAP"}
 
   return {"status":"ok", "token": token}
