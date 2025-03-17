@@ -528,24 +528,70 @@ def login():
     except Exception as e:
       logger.warning(str(e))
       return {"status": str(e)}
-    
+
     if response_meus_dados.status_code == 200:
-        logger.debug("Informações do Aluno:")
-        logger.debug(response_meus_dados.json())
-        logger.debug("")
-        logger.debug(response_meus_dados.json()["matricula"])
-        logger.debug(response_meus_dados.json()["tipo_vinculo"])
-        vinculo = response_meus_dados.json()["vinculo"]
-        logger.debug(vinculo["campus"])
-        logger.debug(token)
+      logger.debug("Informações do Aluno:")
+      logger.debug(response_meus_dados.json())
+      logger.debug("")
+      logger.debug(response_meus_dados.json()["matricula"])
+      logger.debug(response_meus_dados.json()["tipo_vinculo"])
+      vinculo = response_meus_dados.json()["vinculo"]
+      logger.debug(vinculo["campus"])
+      logger.debug(token)
 
-        matricula = response_meus_dados.json()["matricula"]
-        tipo_vinculo = response_meus_dados.json()["tipo_vinculo"]
-        campus = vinculo["campus"]
-        url_foto = response_meus_dados.json()["url_foto_75x100"]
-        nome_usual = response_meus_dados.json()["nome_usual"]
+      matricula = response_meus_dados.json()["matricula"]
+      tipo_vinculo = response_meus_dados.json()["tipo_vinculo"]
+      campus = vinculo["campus"]
+      url_foto = response_meus_dados.json()["url_foto_75x100"]
+      nome_usual = response_meus_dados.json()["nome_usual"]
 
-        return {"status":"ok", "data": {"token": token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipo_vinculo": tipo_vinculo, "foto": url_foto }}
+      sql = "SELECT * FROM usuarios WHERE matricula = '"+ matricula +"'"
+      try:
+        cur = mysql.connection.cursor()
+        cur.execute(sql)
+      except Exception as e:
+        cur.close()
+        logger.warning("falha de acesso ao banco: "+str(e))
+        return {"status":str(e)}
+      
+      numResults = cur.rowcount
+
+      if numResults == 0:
+        nome_sql = nome_usual
+        matr_sql = matricula
+        # matr_sql = "12345"
+        nivel_sql = "usuário"
+        tipo_sql = ""
+        if response_meus_dados.json()["tipo_vinculo"] == "Servidor" :
+          tipo_sql = vinculo["categoria"]
+        else:
+          tipo_sql = "aluno"
+
+        sql =       ("insert into usuarios (matricula, nome, tipoUsuario, nivelGerencia) values (%s,%s,%s,%s)")
+        d = (matr_sql, nome_sql, tipo_sql, nivel_sql)
+        logger.debug(sql % d)
+
+        try:
+          cur.execute(sql, d)
+          mysql.connection.commit()
+        except Exception as e:
+          cur.close()
+          logger.warning("falha de acesso ao banco: "+str(e))
+          return {"status":str(e)}
+
+      sql = "SELECT nivelGerencia FROM usuarios WHERE matricula = '"+ matricula +"'"      
+      try:
+        cur.execute(sql)
+        nivel_gerencia = cur.fetchall()[0][0]
+      except Exception as e:
+        cur.close()
+        logger.warning("falha de acesso ao banco: "+str(e))
+        return {"status":str(e)}
+      
+      logger.debug( nivel_gerencia )
+      cur.close()
+
+      return {"status":"ok", "data": {"token": token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipo_vinculo": tipo_vinculo, "foto": url_foto, "nivelGerencia": nivel_gerencia }}
     else:
         logger.warning(f"Erro ao obter informações. Código de status: {response_meus_dados.status_code}")
         return{"status":"erro"}
