@@ -15,7 +15,7 @@ app = Flask(__name__)
 load_dotenv() #carrega as variveis de ambiente
 
 logger = logging.getLogger("AIPO_API")
-logging.basicConfig(filename='allLogs.log', encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(filename='allLogs.log', encoding='ISO-8859-1', level=logging.DEBUG)
 
 # logging.basicConfig(format='%(levelname)s:%(message)s', encoding='utf-8', level=logging.DEBUG)
 
@@ -24,7 +24,7 @@ terminal_logger = logging.StreamHandler()
 terminal_logger.setLevel(logging.DEBUG)
 
 # handle para lidar com o arquivo
-file_logger = logging.FileHandler("api.log", encoding='utf-8')
+file_logger = logging.FileHandler("api.log", encoding='ISO-8859-1')
 file_logger.setLevel(logging.WARNING)
 
 # create formatter
