@@ -3,6 +3,7 @@ import json
 from flask import Flask
 from flask import request
 import requests
+from flask_cors import CORS
 from flask_mysqldb import MySQL
 import serial
 from datetime import datetime
@@ -12,6 +13,7 @@ import os #utilizado para pegar os valores que estão na variável de ambiente
 from dotenv import load_dotenv
 
 app = Flask(__name__)
+CORS(app)
 load_dotenv() #carrega as variveis de ambiente
 
 logger = logging.getLogger("AIPO_API")
