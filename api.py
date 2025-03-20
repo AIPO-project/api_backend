@@ -515,7 +515,7 @@ def login():
     response = requests.post(api_url + "v2/autenticacao/token/", json=data)
   except Exception as e:
     logger.warning(str(e))
-    return {"status": str(e)}
+    return {"status": "falha login", "erro": str(e)}
   
   if response.status_code == 200:
     token = response.json().get("access")
@@ -544,29 +544,40 @@ def login():
       campus = vinculo["campus"]
       url_foto = response_meus_dados.json()["url_foto_75x100"]
       nome_usual = response_meus_dados.json()["nome_usual"]
+      tipo_usuario = ""
 
       sql = "SELECT * FROM usuarios WHERE matricula = '"+ matricula +"'"
+
       try:
         cur = mysql.connection.cursor()
+      except Exception as e:
+        logger.warning("falha de acesso ao banco: "+str(e))
+        return {"status":str(e)}
+
+      try:
         cur.execute(sql)
       except Exception as e:
         cur.close()
-        logger.warning("falha de acesso ao banco: "+str(e))
+        logger.warning(str(e))
         return {"status":str(e)}
       
       numResults = cur.rowcount
+
+      tipo_sql = ""
+      if response_meus_dados.json()["tipo_vinculo"] == "Servidor" :
+        tipo_sql = vinculo["categoria"]
+      else:
+        tipo_sql = "aluno"
+
+      tipo_usuario = tipo_sql
 
       if numResults == 0:
         nome_sql = nome_usual
         matr_sql = matricula
         # matr_sql = "12345"
         nivel_sql = "usuário"
-        tipo_sql = ""
-        if response_meus_dados.json()["tipo_vinculo"] == "Servidor" :
-          tipo_sql = vinculo["categoria"]
-        else:
-          tipo_sql = "aluno"
 
+        logger.debug(tipo_usuario)
         sql =       ("insert into usuarios (matricula, nome, tipoUsuario, nivelGerencia) values (%s,%s,%s,%s)")
         d = (matr_sql, nome_sql, tipo_sql, nivel_sql)
         logger.debug(sql % d)
@@ -591,12 +602,12 @@ def login():
       logger.debug( nivel_gerencia )
       cur.close()
 
-      return {"status":"ok", "data": {"token": token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipo_vinculo": tipo_vinculo, "foto": url_foto, "nivelGerencia": nivel_gerencia }}
+      return {"status":"ok", "data": {"token": token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipoUsuario": tipo_usuario, "foto": url_foto, "nivelGerencia": nivel_gerencia }}
     else:
         logger.warning(f"Erro ao obter informações. Código de status: {response_meus_dados.status_code}")
         return{"status":"erro"}
   else:
     logger.warning("Erro na autenticação no suap. Verifique seu usuário e senha.")
-    return{"status":"falha de comunicação com SUAP"}
+    return{"status": "falha_login", "erro" : "falha de comunicação com SUAP"}
 
   return {"status":"ok", "token": token}
