@@ -202,7 +202,7 @@ def data(user_id):
     sql += "nome='" + data["nome"] +"', matricula='"+data["matr"]+"'"
     sql += ", ativo='"+ str(data["usuarioAtivo"]) +"'"
     sql += ", tipoUsuario='"+ data["tipoUsuario"] +"', nivelGerencia='"+ data["tipoGerencia"] +"'"
-    sql += " WHERE matricula="+user_id
+    sql += " WHERE matricula='"+user_id+"'"
 
     logger.debug(sql)
 
