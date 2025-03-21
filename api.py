@@ -156,8 +156,9 @@ def data(user_id):
       logger.warning("falha de acesso ao banco: "+str(e))
       return {"status":str(e)}
 
+    sql = "SELECT * FROM usuarios WHERE matricula='"+user_id+"'"
     try:
-      cur.execute("SELECT * FROM usuarios WHERE id="+user_id)
+      cur.execute(sql)
     except Exception as e:
       cur.close()
       logger.warning("falha de acesso ao banco: "+str(e))
@@ -167,7 +168,7 @@ def data(user_id):
 
     logger.debug(str(data))
 
-    return data
+    return {"status": "ok", "data": data}
   if request.method == 'DELETE':
     try:
       cur = mysql.connection.cursor()
