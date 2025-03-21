@@ -214,6 +214,14 @@ def data(user_id):
       return {"status":str(e)}
     
     return {"status":"ok"}
+  
+@app.route('/serialAvailable', methods = ['GET'])
+def serialAvailable():
+  try:
+    portaSerial = serial.Serial('/dev/ttyUSB0', 115200)
+  except:
+    return {"status":"problemas ao abrir a porta serial"}
+  return  {"status":"ok"}
 
 # Utilizado para atualizar a chave de um usuário
 @app.route('/chave/<user_id>', methods = ['PUT'])
