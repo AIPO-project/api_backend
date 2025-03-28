@@ -271,7 +271,7 @@ def setChave(user_id):
 
   return {"status":"ok"}
 
-
+# Utilizado para remover a chave de um usuário
 @app.route('/chave/<user_id>', methods = ['DELETE'])
 def deleteChave(user_id):
   if request.method == 'DELETE':
@@ -517,6 +517,7 @@ def acessos_data():
 
   return {"status":"ok", "numResults": numResults, "Dados": data}
 
+# função para realizar login no sistema
 @app.route('/login', methods = ['POST'])
 def login():
   api_url = "https://suap.ifrn.edu.br/api/"
