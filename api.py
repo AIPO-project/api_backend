@@ -369,6 +369,34 @@ def delete_data(user_id):
 
     return {"resultado":{"status":"ok"}}
 
+#retorna todas as salas que um determinado usuário está com acesso
+@app.route('/salasAutorizadas/<user_id>', methods = ['POST'])
+def getSalasAutorizadas(user_id):
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  sql = "SELECT  s.nome, s.codigo FROM usuarios u "
+  sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
+  sql += "JOIN salas s ON aut.id_sala = s.id "
+  sql += "WHERE u.matricula = "+ user_id
+
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  columns = [column[0] for column in cur.description]
+  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  return {"status":"ok", "data":data}
+
 # Dá autorização a um usuário para entrar em determinada sala
 @app.route('/autorizarUsuario/<user_id>', methods = ['PUT', 'DELETE'])
 def autorizar_usuario(user_id):
