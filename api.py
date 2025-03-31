@@ -551,10 +551,10 @@ def getAcessosPorUsuario(user_id):
   data_inicial = request.json["data_inicial"]
   data_final = request.json["data_final"] 
 
-  logger.debug("Data final")
-  logger.debug(data_final)
-  logger.debug("Data inicial")
-  logger.debug(data_inicial)
+  # logger.debug("Data final")
+  # logger.debug(data_final)
+  # logger.debug("Data inicial")
+  # logger.debug(data_inicial)
 
   try:
     cur = mysql.connection.cursor()
@@ -572,8 +572,8 @@ def getAcessosPorUsuario(user_id):
   sql += " and DATE(a.timestamp) <= '"+data_final+"'"
   sql += " and DATE(a.timestamp) >= '"+data_inicial+"'"
 
-  logger.debug("SQL")
-  logger.debug(sql)
+  # logger.debug("SQL")
+  # logger.debug(sql)
 
   try:
     cur.execute(sql)
