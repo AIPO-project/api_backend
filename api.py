@@ -544,6 +544,48 @@ def acessos_data():
 
   return {"status":"ok", "numResults": numResults, "Dados": data}
 
+# retorna os dados de acessos realizados por um usuário em uma data específica
+@app.route('/dataAcessosPorDataPorUsuario/<user_id>', methods = ['POST'])
+def getDatasAcessosPorUsuarioPorData(user_id):
+  data_inicial = request.json["data_inicial"]
+  data_final = request.json["data_final"] 
+
+  # logger.debug("Data final")
+  # logger.debug(data_final)
+  # logger.debug("Data inicial")
+  # logger.debug(data_inicial)
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+  
+  sql = "SELECT a.timestamp, a.autorizado, s.codigo, s.nome FROM usuarios u "
+  sql += "JOIN acessos a ON u.matricula = a.usuario "
+  sql += "JOIN salas s ON a.sala = s.id "
+  sql += "WHERE u.matricula = '" + user_id + "'"
+  sql += " and DATE(a.timestamp) <= '"+data_final+"'"
+  sql += " and DATE(a.timestamp) >= '"+data_inicial+"'"
+
+  # logger.debug("SQL")
+  # logger.debug(sql)
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+  
+  columns = [column[0] for column in cur.description]
+  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  # logger.debug("Resultado")
+  # logger.debug(data)
+
+  return {"status":"ok", "data": data}
+
 # retornar o número de acessos realizados por um determinado usuário
 @app.route('/acessosPorUsuario/<user_id>', methods = ['POST'])
 def getAcessosPorUsuario(user_id):
