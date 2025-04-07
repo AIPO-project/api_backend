@@ -109,7 +109,7 @@ def add_data():
   
   return {"status":"ok"}
 
-# Usado para adicionar uma nova sala ao banco
+# Usado para retornar uma lista de salas autorizadas para usuarios
 @app.route('/UsuariosSalas', methods = ['GET'])
 def get_usuarios_salas():
 
@@ -144,6 +144,91 @@ def get_usuarios_salas():
   cur.close()
 
   return temp
+
+# Usado para retornar uma lista de usuarios autorizados para uma sala
+@app.route('/getUsuariosPorSala/<codigo_sala>', methods = ['GET'])
+def getUsuariosPorSala(codigo_sala):
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  # sql = "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
+  # sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
+  # sql += "JOIN salas s ON aut.id_sala = s.id"
+  logger.debug(codigo_sala)
+  sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
+  sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
+  sql += "where s.codigo='"+codigo_sala+"' and (aut.data_limite is NULL or aut.data_limite < NOW())"
+
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  columns = [column[0] for column in cur.description]
+  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  # temp={}
+
+  # logger.debug(data)
+
+  # for d in data:
+  #   temp[d["usuarios"]] = []
+  
+  # for d in data:
+  #   temp[d["usuarios"]].append(d["salas"])
+
+  cur.close()
+
+  return data
+
+# Usado para retornar uma lista de usuarios não autorizados para uma sala
+def getUsuariosNaoAutorizados(codigo_sala):
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  # sql = "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
+  # sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
+  # sql += "JOIN salas s ON aut.id_sala = s.id"
+
+  sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
+  sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
+  sql += "where s.codigo='a111' and (aut.data_limite is NULL or aut.data_limite < NOW())"
+
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  columns = [column[0] for column in cur.description]
+  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  # temp={}
+
+  # logger.debug(data)
+
+  # for d in data:
+  #   temp[d["usuarios"]] = []
+  
+  # for d in data:
+  #   temp[d["usuarios"]].append(d["salas"])
+
+  cur.close()
+
+  return data
 
 # Usado para retornar,modificar dados de um usuário ou deletar um usuário
 @app.route('/usuario/<user_id>', methods = ['GET', 'PUT', 'DELETE'])
