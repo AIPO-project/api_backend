@@ -188,6 +188,50 @@ def getUsuariosPorSala(codigo_sala):
 
   return data
 
+
+# Usado para retornar uma lista de usuarios não autorizados para uma sala
+@app.route('/getUsuariosForaSala/<codigo_sala>', methods = ['GET'])
+def getUsuariosForaSala(codigo_sala):
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  # sql = "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
+  # sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
+  # sql += "JOIN salas s ON aut.id_sala = s.id"
+  logger.debug(codigo_sala)
+  sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
+  sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
+  sql += "where s.codigo!='"+codigo_sala+"' or (s.codigo='"+codigo_sala+"' "
+  sql += "and (aut.data_inicio > NOW() or aut.data_limite < NOW() ))"
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  columns = [column[0] for column in cur.description]
+  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  # temp={}
+
+  # logger.debug(data)
+
+  # for d in data:
+  #   temp[d["usuarios"]] = []
+  
+  # for d in data:
+  #   temp[d["usuarios"]].append(d["salas"])
+
+  cur.close()
+
+  return data
+
 # Usado para retornar uma lista de usuarios não autorizados para uma sala
 def getUsuariosNaoAutorizados(codigo_sala):
 
