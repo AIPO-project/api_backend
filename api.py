@@ -233,6 +233,7 @@ def getUsuariosForaSala(codigo_sala):
   return data
 
 # Usado para retornar uma lista de usuarios não autorizados para uma sala
+@app.route('/getUsuariosNaoAutorizados/<codigo_sala>', methods = ['GET'])
 def getUsuariosNaoAutorizados(codigo_sala):
 
   try:
@@ -247,8 +248,7 @@ def getUsuariosNaoAutorizados(codigo_sala):
 
   sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
   sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
-  sql += "where s.codigo='a111' and (aut.data_limite is NULL or aut.data_limite < NOW())"
-
+  sql += "where s.codigo='"+codigo_sala+"' and (aut.data_limite is NULL or aut.data_limite < NOW())"
 
   try:
     cur.execute(sql)
@@ -258,21 +258,30 @@ def getUsuariosNaoAutorizados(codigo_sala):
     return {"status":str(e)}
 
   columns = [column[0] for column in cur.description]
-  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+  usuariosAutorizados = [dict(zip(columns, row)) for row in cur.fetchall()]
 
-  # temp={}
+  try:
+    cur.execute('''SELECT * FROM usuarios''')
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
 
-  # logger.debug(data)
-
-  # for d in data:
-  #   temp[d["usuarios"]] = []
+  columns = [column[0] for column in cur.description]
+  todosUsuarios = [dict(zip(columns, row)) for row in cur.fetchall()]
   
-  # for d in data:
-  #   temp[d["usuarios"]].append(d["salas"])
+  data = []
+
+  for usuario in todosUsuarios:
+    data.append(usuario)
+    for usarioAutorizado in usuariosAutorizados:
+      if usuario["matricula"] == usarioAutorizado["matricula"] :
+        data.remove(usuario)
+        break
 
   cur.close()
 
-  return data
+  return {"status":"ok", "dados":data}
 
 # Usado para retornar,modificar dados de um usuário ou deletar um usuário
 @app.route('/usuario/<user_id>', methods = ['GET', 'PUT', 'DELETE'])
