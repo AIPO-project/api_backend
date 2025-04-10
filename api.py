@@ -482,8 +482,29 @@ def add_sala():
   return {"status":"ok"}
 
 #modifica ou deleta uma sala do banco
-@app.route('/sala/<user_id>', methods = ['PUT', 'DELETE'])
-def delete_data(user_id):
+@app.route('/sala/<sala_id>', methods = ['PUT', 'DELETE'])
+def modifica_salas(sala_id):
+
+  if request.method == 'PUT':
+    data = request.json
+    
+    try:
+      cur = mysql.connection.cursor() 
+    except Exception as e:
+      logger.warning("falha de acesso ao banco: "+str(e))
+      return {"status":str(e)}
+    
+    sql  = "UPDATE salas SET "
+    sql += "nome='" + data["nome"] +"', codigo='"+data["codigo"]+"'"
+    sql += ", fechadura='"+ data["fechadura"] +"', local='"+ data["local"] +"'"
+    sql += " WHERE id='"+sala_id+"'"
+
+    logger.debug(sql)
+
+    cur.execute(sql)
+    mysql.connection.commit()
+
+    return {"status":"ok"}
 
   if request.method == 'DELETE':
     try:
@@ -491,7 +512,7 @@ def delete_data(user_id):
     except Exception as e:
       logger.warning("falha de acesso ao banco: "+str(e))
       return {"status":str(e)}   
-    sql = ("DELETE FROM salas WHERE id="+user_id)
+    sql = ("DELETE FROM salas WHERE id="+sala_id)
 
     cur.execute(sql)
     mysql.connection.commit()
