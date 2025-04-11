@@ -774,21 +774,24 @@ def autorizarUsuariosPorSala(cod_sala):
   
     return {"status":"ok"}
   
-  # if request.method == 'DELETE':
-  #   sql = "delete autorizacao from autorizacao "
-  #   sql += "join usuarios on usuarios.id = autorizacao.id_usuario where "
-  #   sql += "matricula='"+user_id+"'"
+  if request.method == 'DELETE':
+    for usuario in usuarios:
+      sql = "delete autorizacao from autorizacao "
+      sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
+      sql += "JOIN salas s ON aut.id_sala = s.id "
+      sql += "where u.matricula='"+usuario.matricula+"' and s.codigo='"+cod_sala+"'"
+# delete autorizacao from autorizacao JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id where u.matricula='' and s.codigo=''
 
-  #   try:
-  #     cur.execute(sql)
-  #     mysql.connection.commit()
-  #   except Exception as e:
-  #     cur.close()
-  #     logger.warning(str(e))
-  #     return {"status": str(e)}
+      try:
+        cur.execute(sql)
+        mysql.connection.commit()
+      except Exception as e:
+        cur.close()
+        logger.warning(str(e))
+        return {"status": str(e)}
 
-  #   cur.close()
-  #   return {"status":"ok"}
+      cur.close()
+    return {"status":"ok"}
 
 # retorna o número de acesso realizados hoje
 @app.route('/acessosHoje', methods = ['GET'])
