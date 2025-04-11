@@ -776,11 +776,12 @@ def autorizarUsuariosPorSala(cod_sala):
   
   if request.method == 'DELETE':
     for usuario in usuarios:
-      sql = "delete autorizacao from autorizacao "
-      sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
-      sql += "JOIN salas s ON aut.id_sala = s.id "
-      sql += "where u.matricula='"+usuario.matricula+"' and s.codigo='"+cod_sala+"'"
-# delete autorizacao from autorizacao JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id where u.matricula='' and s.codigo=''
+      sql = "DELETE autorizacao from autorizacao "
+      sql += "join usuarios on usuarios.id = autorizacao.id_usuario "
+      sql += "join salas on salas.id = autorizacao.id_sala  "
+      sql += "where salas.codigo='"+cod_sala+"' and usuarios.matricula='"+matricula+"'"
+# delete autorizacao from autorizacao aut JOIN usuarios u ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id where u.matricula='' and s.codigo=''
+# DELETE autorizacao from autorizacao join salas on salas.id = autorizacao.id_sala join usuarios on usuarios.id = autorizacao.id_usuario where salas.codigo='a208' and usuarios.matricula='1934598';
 
       try:
         cur.execute(sql)
