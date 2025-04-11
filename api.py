@@ -646,6 +646,150 @@ def autorizar_usuario(user_id):
     cur.close()
     return {"status":"ok"}
 
+# Dá autorização a uma lista de usuários para entrar em uma determinada sala
+@app.route('/autorizarUsuariosPorSala/<cod_sala>', methods = ['PUT', 'DELETE'])
+def autorizarUsuariosPorSala(cod_sala):
+  logger.debug(request.json)
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e: 
+    logger.warning(str(e))
+    return {"status": str(e)}
+
+  if request.method == 'PUT':
+    usuarios = request.json["usuarios"]
+    dataInicio = request.json["dataInicio"]
+    dataFim = request.json["dataFim"]
+    horarioInicio = request.json["horarioInicio"]
+    horarioFim = request.json["horarioFim"]
+
+    dados_para_upsert = [
+    {"id_usuario": 1, "id_sala": 1},
+    {"id_usuario": 1, "id_sala": 4},
+    {"id_usuario": 1, "id_sala": 5}
+    ]
+
+    # INSERT INTO autorizacao (id_usuario, id_sala, data_limite, data_inicio, horario_inicio, horario_fim)
+    # VALUES (%s, %s, %s, %s, %s, %s)
+    # sql = """
+    # INSERT INTO autorizacao (id_usuario, id_sala)
+    # VALUES (%s, %s)
+    # ON DUPLICATE KEY UPDATE preco = VALUES(preco)
+    # """
+    for usuario in usuarios:
+      matricula = usuario["matricula"]
+      sql = "SELECT  aut.id FROM usuarios u "
+      sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
+      sql += "JOIN salas s ON aut.id_sala = s.id "
+      sql += "WHERE u.matricula = '"+matricula+"' "
+      sql += "and s.codigo='"+cod_sala+"'"
+
+      try:
+        cur.execute(sql)
+        mysql.connection.commit()
+      except Exception as e:
+        cur.close()
+        logger.warning(str(e))
+        return {"status": str(e)}
+      
+      numResults = cur.rowcount
+
+      if numResults > 0 :
+        columns = [column[0] for column in cur.description]
+        data = [dict(zip(columns, row)) for row in cur.fetchall()]
+        logger.debug(data)
+ 
+        id = data[0]["id"]
+        logger.debug(data)
+        logger.debug(id)
+        if dataFim is None :
+          sql = "update autorizacao set data_inicio= '"+dataInicio+"', "
+          sql += "horario_inicio= '"+horarioInicio+"', horario_fim= '"+horarioFim+"' "
+          sql += "where id='"+str(id)+"'"
+        else :
+          sql = "update autorizacao set data_limite= '"+dataFim+"',  data_inicio= '"+dataInicio+"', "
+          sql += "horario_inicio= '"+horarioInicio+"', horario_fim= '"+horarioFim+"' "
+          sql += "where id='"+str(id)+"'"
+        try:
+          cur.execute(sql)
+          mysql.connection.commit()
+        except Exception as e:
+          cur.close()
+          logger.warning(str(e))
+          return {"status": str(e)}
+      else :
+        logger.debug("vai inserir agora")
+        logger.debug(usuario)
+        sql = "insert into autorizacao (id_sala, id_usuario) "
+        sql += "select salas.id, usuarios.id from salas, usuarios "
+        sql += "where salas.codigo='"+cod_sala+"' and usuarios.matricula='"+matricula+"'"
+        logger.debug(sql)
+        try:
+          cur.execute(sql)
+          mysql.connection.commit()
+        except Exception as e:
+          cur.close()
+          logger.warning(str(e))
+          return {"status": str(e)}
+        
+        sql = "select aut.id "
+        logger.debug(numResults)
+        
+        sql = "SELECT  aut.id FROM usuarios u "
+        sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
+        sql += "JOIN salas s ON aut.id_sala = s.id "
+        sql += "WHERE u.matricula = '"+matricula+"' "
+        sql += "and s.codigo='"+cod_sala+"'"
+
+        try:
+          cur.execute(sql)
+          mysql.connection.commit()
+        except Exception as e:
+          cur.close()
+          logger.warning(str(e))
+          return {"status": str(e)}
+        
+        columns = [column[0] for column in cur.description]
+        data = [dict(zip(columns, row)) for row in cur.fetchall()]
+        id = data[0]["id"]
+        
+        if dataFim is None :
+          sql = "update autorizacao set data_inicio= '"+dataInicio+"', "
+          sql += "horario_inicio= '"+horarioInicio+"', horario_fim= '"+horarioFim+"' "
+          sql += "where id='"+str(id)+"'"
+        else :
+          sql = "update autorizacao set data_limite= '"+dataFim+"',  data_inicio= '"+dataInicio+"', "
+          sql += "horario_inicio= '"+horarioInicio+"', horario_fim= '"+horarioFim+"' "
+          sql += "where id='"+str(id)+"'"
+        
+        try:
+          cur.execute(sql)
+          mysql.connection.commit()
+        except Exception as e:
+          cur.close()
+          logger.warning(str(e))
+          return {"status": str(e)}
+
+  
+    return {"status":"ok"}
+  
+  # if request.method == 'DELETE':
+  #   sql = "delete autorizacao from autorizacao "
+  #   sql += "join usuarios on usuarios.id = autorizacao.id_usuario where "
+  #   sql += "matricula='"+user_id+"'"
+
+  #   try:
+  #     cur.execute(sql)
+  #     mysql.connection.commit()
+  #   except Exception as e:
+  #     cur.close()
+  #     logger.warning(str(e))
+  #     return {"status": str(e)}
+
+  #   cur.close()
+  #   return {"status":"ok"}
+
 # retorna o número de acesso realizados hoje
 @app.route('/acessosHoje', methods = ['GET'])
 def acessos_hoje():
