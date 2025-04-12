@@ -161,8 +161,7 @@ def getUsuariosPorSala(codigo_sala):
   logger.debug(codigo_sala)
   sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
   sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
-  sql += "where s.codigo='"+codigo_sala+"' and (aut.data_limite is NULL or aut.data_limite < NOW())"
-
+  sql += "where s.codigo='"+codigo_sala+"' and (aut.data_limite is NULL or  NOW() < aut.data_limite)"
 
   try:
     cur.execute(sql)
@@ -176,7 +175,7 @@ def getUsuariosPorSala(codigo_sala):
 
   # temp={}
 
-  # logger.debug(data)
+  logger.debug(data)
 
   # for d in data:
   #   temp[d["usuarios"]] = []
@@ -248,7 +247,7 @@ def getUsuariosNaoAutorizados(codigo_sala):
 
   sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
   sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
-  sql += "where s.codigo='"+codigo_sala+"' and (aut.data_limite is NULL or aut.data_limite < NOW())"
+  sql += "where s.codigo='"+codigo_sala+"' and (aut.data_limite is NULL or NOW() < aut.data_limite)"
 
   try:
     cur.execute(sql)
