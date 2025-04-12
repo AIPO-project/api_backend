@@ -656,9 +656,9 @@ def autorizarUsuariosPorSala(cod_sala):
   except Exception as e: 
     logger.warning(str(e))
     return {"status": str(e)}
-
+  
+  usuarios = request.json["usuarios"]
   if request.method == 'PUT':
-    usuarios = request.json["usuarios"]
     dataInicio = request.json["dataInicio"]
     dataFim = request.json["dataFim"]
     horarioInicio = request.json["horarioInicio"]
@@ -776,12 +776,13 @@ def autorizarUsuariosPorSala(cod_sala):
   
   if request.method == 'DELETE':
     for usuario in usuarios:
+      matricula = usuario["matricula"]
       sql = "DELETE autorizacao from autorizacao "
       sql += "join usuarios on usuarios.id = autorizacao.id_usuario "
       sql += "join salas on salas.id = autorizacao.id_sala  "
       sql += "where salas.codigo='"+cod_sala+"' and usuarios.matricula='"+matricula+"'"
-# delete autorizacao from autorizacao aut JOIN usuarios u ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id where u.matricula='' and s.codigo=''
-# DELETE autorizacao from autorizacao join salas on salas.id = autorizacao.id_sala join usuarios on usuarios.id = autorizacao.id_usuario where salas.codigo='a208' and usuarios.matricula='1934598';
+      # delete autorizacao from autorizacao aut JOIN usuarios u ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id where u.matricula='' and s.codigo=''
+      # DELETE autorizacao from autorizacao join salas on salas.id = autorizacao.id_sala join usuarios on usuarios.id = autorizacao.id_usuario where salas.codigo='a208' and usuarios.matricula='1934598';
 
       try:
         cur.execute(sql)
@@ -791,7 +792,7 @@ def autorizarUsuariosPorSala(cod_sala):
         logger.warning(str(e))
         return {"status": str(e)}
 
-      cur.close()
+    cur.close()
     return {"status":"ok"}
 
 # retorna o número de acesso realizados hoje
