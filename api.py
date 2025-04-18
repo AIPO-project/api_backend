@@ -161,7 +161,9 @@ def getUsuariosPorSala(codigo_sala):
   logger.debug(codigo_sala)
   sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
   sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
-  sql += "where s.codigo='"+codigo_sala+"' and (aut.data_limite is NULL or  NOW() < aut.data_limite)"
+  sql += "where s.codigo='"+codigo_sala+"' and (aut.data_limite is NULL or  NOW() < aut.data_limite) "
+  sql += "and (aut.horario_inicio is NULL or aut.horario_inicio = '00:00:00')"
+  sql += "and (aut.horario_fim is NULL or aut.horario_fim = '23:59:59')"
 
   try:
     cur.execute(sql)
@@ -171,9 +173,24 @@ def getUsuariosPorSala(codigo_sala):
     return {"status":str(e)}
 
   columns = [column[0] for column in cur.description]
-  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+  acessoTodosHorarios = [dict(zip(columns, row)) for row in cur.fetchall()]
 
-  # temp={}
+  sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
+  sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
+  sql += "where s.codigo='"+codigo_sala+"' and (aut.data_limite is NULL or  NOW() < aut.data_limite) "
+  sql += "and (aut.horario_inicio is not NULL and aut.horario_inicio != '00:00:00')"
+  sql += "and (aut.horario_fim is not NULL and aut.horario_fim != '23:59:59')"
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  columns = [column[0] for column in cur.description]
+  acessoHorariosLimitados = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  data = {"allHours": acessoTodosHorarios, "limitedHours": acessoHorariosLimitados}
 
   logger.debug(data)
 
@@ -703,7 +720,7 @@ def autorizarUsuariosPorSala(cod_sala):
         logger.debug(data)
         logger.debug(id)
         if dataFim is None :
-          sql = "update autorizacao set data_inicio= '"+dataInicio+"', "
+          sql = "update autorizacao set data_inicio= '"+dataInicio+"', data_limite= NULL, "
           sql += "horario_inicio= '"+horarioInicio+"', horario_fim= '"+horarioFim+"' "
           sql += "where id='"+str(id)+"'"
         else :
