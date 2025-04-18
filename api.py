@@ -720,7 +720,7 @@ def autorizarUsuariosPorSala(cod_sala):
         logger.debug(data)
         logger.debug(id)
         if dataFim is None :
-          sql = "update autorizacao set data_inicio= '"+dataInicio+"', "
+          sql = "update autorizacao set data_inicio= '"+dataInicio+"', data_limite= NULL, "
           sql += "horario_inicio= '"+horarioInicio+"', horario_fim= '"+horarioFim+"' "
           sql += "where id='"+str(id)+"'"
         else :
