@@ -964,6 +964,60 @@ def getAcessosPorUsuario(user_id):
   
   return {"status":"ok", "data": list}
 
+# retorna os usuarios que acessaram uma sala em uma data específica
+@app.route('/getAcessosPorSala/<sala_codigo>', methods = ['POST'])
+def getAcessosPorSala(sala_codigo):
+  data_inicial = request.json["data_inicial"]
+  data_final = request.json["data_final"] 
+
+  # logger.debug("Data final")
+  # logger.debug(data_final)
+  # logger.debug("Data inicial")
+  # logger.debug(data_inicial)
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  # sql = "select * from acessos where DATE(timestamp) <= '"+data_final+"'"
+  # sql += " and DATE(timestamp) >= '"+data_inicial+"'"
+
+  sql = "SELECT  u.nome, u.matricula FROM usuarios u "
+  sql += "JOIN acessos a ON u.matricula = a.usuario "
+  sql += "JOIN salas s ON a.sala = s.id "
+  sql += "WHERE s.codigo = '" + sala_codigo + "'"
+  sql += " and DATE(a.timestamp) <= '"+data_final+"'"
+  sql += " and DATE(a.timestamp) >= '"+data_inicial+"'"
+
+  # logger.debug("SQL")
+  # logger.debug(sql)
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  
+  columns = [column[0] for column in cur.description]
+  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  list = {}
+
+  for acesso in data:
+    if acesso["codigo"] not in list:
+      list[acesso["codigo"]] = 1
+    else:
+      temp = list[acesso["codigo"]]
+      temp = temp + 1
+      list[acesso["codigo"]] = temp
+  
+  return {"status":"ok", "data": list}
+
+
 # função para realizar login no sistema
 @app.route('/login', methods = ['POST'])
 def login():
