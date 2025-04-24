@@ -158,7 +158,7 @@ def getUsuariosPorSala(codigo_sala):
   # sql = "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
   # sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
   # sql += "JOIN salas s ON aut.id_sala = s.id"
-  logger.debug(codigo_sala)
+
   sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
   sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
   sql += "where s.codigo='"+codigo_sala+"' and (aut.data_limite is NULL or  NOW() < aut.data_limite) "
@@ -178,8 +178,8 @@ def getUsuariosPorSala(codigo_sala):
   sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
   sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
   sql += "where s.codigo='"+codigo_sala+"' and (aut.data_limite is NULL or  NOW() < aut.data_limite) "
-  sql += "and (aut.horario_inicio is not NULL and aut.horario_inicio != '00:00:00')"
-  sql += "and (aut.horario_fim is not NULL and aut.horario_fim != '23:59:59')"
+  sql += "and ((aut.horario_inicio is not NULL and aut.horario_inicio != '00:00:00')"
+  sql += "or (aut.horario_fim is not NULL and aut.horario_fim != '23:59:59'))"
   try:
     cur.execute(sql)
   except Exception as e:
@@ -963,6 +963,57 @@ def getAcessosPorUsuario(user_id):
       list[acesso["codigo"]] = temp
   
   return {"status":"ok", "data": list}
+
+# retorna os usuarios que acessaram uma sala em uma data específica
+@app.route('/getAcessosPorSala/<sala_codigo>', methods = ['POST'])
+def getAcessosPorSala(sala_codigo):
+  data_inicial = request.json["data_inicial"]
+  data_final = request.json["data_final"] 
+
+  # logger.debug("Data final")
+  # logger.debug(data_final)
+  # logger.debug("Data inicial")
+  # logger.debug(data_inicial)
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  # sql = "select * from acessos where DATE(timestamp) <= '"+data_final+"'"
+  # sql += " and DATE(timestamp) >= '"+data_inicial+"'"
+
+  sql = "SELECT  u.nome, u.matricula, a.timestamp, a.autorizado FROM usuarios u "
+  sql += "JOIN acessos a ON u.matricula = a.usuario "
+  sql += "JOIN salas s ON a.sala = s.id "
+  sql += "WHERE s.codigo = '" + sala_codigo + "'"
+  sql += " and DATE(a.timestamp) <= '"+data_final+"'"
+  sql += " and DATE(a.timestamp) >= '"+data_inicial+"'"
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  
+  columns = [column[0] for column in cur.description]
+  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+  
+  # list = {}
+
+  # for acesso in data:
+  #   if acesso["matricula"] not in list:
+  #     list[acesso["matricula"]] = 1
+  #   else:
+  #     temp = list[acesso["matricula"]]
+  #     temp = temp + 1
+  #     list[acesso["matricula"]] = temp
+  
+  return {"status":"ok", "data": data}
+
 
 # função para realizar login no sistema
 @app.route('/login', methods = ['POST'])
