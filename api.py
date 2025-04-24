@@ -891,6 +891,7 @@ def getDatasAcessosPorUsuarioPorData(user_id):
   sql += "WHERE u.matricula = '" + user_id + "'"
   sql += " and DATE(a.timestamp) <= '"+data_final+"'"
   sql += " and DATE(a.timestamp) >= '"+data_inicial+"'"
+  sql += " order by a.timestamp"
 
   # logger.debug("SQL")
   # logger.debug(sql)
@@ -990,6 +991,7 @@ def getAcessosPorSala(sala_codigo):
   sql += "WHERE s.codigo = '" + sala_codigo + "'"
   sql += " and DATE(a.timestamp) <= '"+data_final+"'"
   sql += " and DATE(a.timestamp) >= '"+data_inicial+"'"
+  sql += " order by a.timestamp"
 
   try:
     cur.execute(sql)
