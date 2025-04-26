@@ -2,6 +2,8 @@ import time
 import json
 from flask import Flask
 from flask import request
+import requests
+from flask_cors import CORS
 from flask_mysqldb import MySQL
 import serial
 from datetime import datetime
@@ -11,10 +13,11 @@ import os #utilizado para pegar os valores que estão na variável de ambiente
 from dotenv import load_dotenv
 
 app = Flask(__name__)
+CORS(app)
 load_dotenv() #carrega as variveis de ambiente
 
 logger = logging.getLogger("AIPO_API")
-logging.basicConfig(filename='allLogs.log', encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(filename='allLogs.log', encoding='ISO-8859-1', level=logging.DEBUG)
 
 # logging.basicConfig(format='%(levelname)s:%(message)s', encoding='utf-8', level=logging.DEBUG)
 
@@ -23,7 +26,7 @@ terminal_logger = logging.StreamHandler()
 terminal_logger.setLevel(logging.DEBUG)
 
 # handle para lidar com o arquivo
-file_logger = logging.FileHandler("api.log", encoding='utf-8')
+file_logger = logging.FileHandler("api.log", encoding='ISO-8859-1')
 file_logger.setLevel(logging.WARNING)
 
 # create formatter
@@ -106,7 +109,7 @@ def add_data():
   
   return {"status":"ok"}
 
-# Usado para adicionar uma nova sala ao banco
+# Usado para retornar uma lista de salas autorizadas para usuarios
 @app.route('/UsuariosSalas', methods = ['GET'])
 def get_usuarios_salas():
 
@@ -142,6 +145,160 @@ def get_usuarios_salas():
 
   return temp
 
+# Usado para retornar uma lista de usuarios autorizados para uma sala
+@app.route('/getUsuariosPorSala/<codigo_sala>', methods = ['GET'])
+def getUsuariosPorSala(codigo_sala):
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  # sql = "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
+  # sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
+  # sql += "JOIN salas s ON aut.id_sala = s.id"
+
+  sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
+  sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
+  sql += "where s.codigo='"+codigo_sala+"' and (aut.data_limite is NULL or  NOW() < aut.data_limite) "
+  sql += "and (aut.horario_inicio is NULL or aut.horario_inicio = '00:00:00')"
+  sql += "and (aut.horario_fim is NULL or aut.horario_fim = '23:59:59')"
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  columns = [column[0] for column in cur.description]
+  acessoTodosHorarios = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
+  sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
+  sql += "where s.codigo='"+codigo_sala+"' and (aut.data_limite is NULL or  NOW() < aut.data_limite) "
+  sql += "and ((aut.horario_inicio is not NULL and aut.horario_inicio != '00:00:00')"
+  sql += "or (aut.horario_fim is not NULL and aut.horario_fim != '23:59:59'))"
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  columns = [column[0] for column in cur.description]
+  acessoHorariosLimitados = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  data = {"allHours": acessoTodosHorarios, "limitedHours": acessoHorariosLimitados}
+
+  logger.debug(data)
+
+  # for d in data:
+  #   temp[d["usuarios"]] = []
+  
+  # for d in data:
+  #   temp[d["usuarios"]].append(d["salas"])
+
+  cur.close()
+
+  return data
+
+
+# Usado para retornar uma lista de usuarios não autorizados para uma sala
+@app.route('/getUsuariosForaSala/<codigo_sala>', methods = ['GET'])
+def getUsuariosForaSala(codigo_sala):
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  # sql = "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
+  # sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
+  # sql += "JOIN salas s ON aut.id_sala = s.id"
+  logger.debug(codigo_sala)
+  sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
+  sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
+  sql += "where s.codigo!='"+codigo_sala+"' or (s.codigo='"+codigo_sala+"' "
+  sql += "and (aut.data_inicio > NOW() or aut.data_limite < NOW() ))"
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  columns = [column[0] for column in cur.description]
+  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  # temp={}
+
+  # logger.debug(data)
+
+  # for d in data:
+  #   temp[d["usuarios"]] = []
+  
+  # for d in data:
+  #   temp[d["usuarios"]].append(d["salas"])
+
+  cur.close()
+
+  return data
+
+# Usado para retornar uma lista de usuarios não autorizados para uma sala
+@app.route('/getUsuariosNaoAutorizados/<codigo_sala>', methods = ['GET'])
+def getUsuariosNaoAutorizados(codigo_sala):
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  # sql = "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
+  # sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
+  # sql += "JOIN salas s ON aut.id_sala = s.id"
+
+  sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
+  sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
+  sql += "where s.codigo='"+codigo_sala+"' and (aut.data_limite is NULL or NOW() < aut.data_limite)"
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  columns = [column[0] for column in cur.description]
+  usuariosAutorizados = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  try:
+    cur.execute('''SELECT * FROM usuarios''')
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  columns = [column[0] for column in cur.description]
+  todosUsuarios = [dict(zip(columns, row)) for row in cur.fetchall()]
+  
+  data = []
+
+  for usuario in todosUsuarios:
+    data.append(usuario)
+    for usarioAutorizado in usuariosAutorizados:
+      if usuario["matricula"] == usarioAutorizado["matricula"] :
+        data.remove(usuario)
+        break
+
+  cur.close()
+
+  return {"status":"ok", "dados":data}
+
 # Usado para retornar,modificar dados de um usuário ou deletar um usuário
 @app.route('/usuario/<user_id>', methods = ['GET', 'PUT', 'DELETE'])
 def data(user_id):
@@ -153,8 +310,9 @@ def data(user_id):
       logger.warning("falha de acesso ao banco: "+str(e))
       return {"status":str(e)}
 
+    sql = "SELECT * FROM usuarios WHERE matricula='"+user_id+"'"
     try:
-      cur.execute("SELECT * FROM usuarios WHERE id="+user_id)
+      cur.execute(sql)
     except Exception as e:
       cur.close()
       logger.warning("falha de acesso ao banco: "+str(e))
@@ -164,7 +322,7 @@ def data(user_id):
 
     logger.debug(str(data))
 
-    return data
+    return {"status": "ok", "data": data}
   if request.method == 'DELETE':
     try:
       cur = mysql.connection.cursor()
@@ -199,7 +357,7 @@ def data(user_id):
     sql += "nome='" + data["nome"] +"', matricula='"+data["matr"]+"'"
     sql += ", ativo='"+ str(data["usuarioAtivo"]) +"'"
     sql += ", tipoUsuario='"+ data["tipoUsuario"] +"', nivelGerencia='"+ data["tipoGerencia"] +"'"
-    sql += " WHERE matricula="+user_id
+    sql += " WHERE matricula='"+user_id+"'"
 
     logger.debug(sql)
 
@@ -211,6 +369,14 @@ def data(user_id):
       return {"status":str(e)}
     
     return {"status":"ok"}
+  
+@app.route('/serialAvailable', methods = ['GET'])
+def serialAvailable():
+  try:
+    portaSerial = serial.Serial('/dev/ttyUSB0', 115200)
+  except:
+    return {"status":"problemas ao abrir a porta serial"}
+  return  {"status":"ok"}
 
 # Utilizado para atualizar a chave de um usuário
 @app.route('/chave/<user_id>', methods = ['PUT'])
@@ -259,7 +425,7 @@ def setChave(user_id):
 
   return {"status":"ok"}
 
-
+# Utilizado para remover a chave de um usuário
 @app.route('/chave/<user_id>', methods = ['DELETE'])
 def deleteChave(user_id):
   if request.method == 'DELETE':
@@ -283,7 +449,6 @@ def deleteChave(user_id):
 
 
     return {"status":"ok"}    
-
 
 # retorna a lista de salas
 @app.route('/salas', methods = ['GET'])
@@ -342,8 +507,29 @@ def add_sala():
   return {"status":"ok"}
 
 #modifica ou deleta uma sala do banco
-@app.route('/sala/<user_id>', methods = ['PUT', 'DELETE'])
-def delete_data(user_id):
+@app.route('/sala/<sala_id>', methods = ['PUT', 'DELETE'])
+def modifica_salas(sala_id):
+
+  if request.method == 'PUT':
+    data = request.json
+    
+    try:
+      cur = mysql.connection.cursor() 
+    except Exception as e:
+      logger.warning("falha de acesso ao banco: "+str(e))
+      return {"status":str(e)}
+    
+    sql  = "UPDATE salas SET "
+    sql += "nome='" + data["nome"] +"', codigo='"+data["codigo"]+"'"
+    sql += ", fechadura='"+ data["fechadura"] +"', local='"+ data["local"] +"'"
+    sql += " WHERE id='"+sala_id+"'"
+
+    logger.debug(sql)
+
+    cur.execute(sql)
+    mysql.connection.commit()
+
+    return {"status":"ok"}
 
   if request.method == 'DELETE':
     try:
@@ -351,13 +537,40 @@ def delete_data(user_id):
     except Exception as e:
       logger.warning("falha de acesso ao banco: "+str(e))
       return {"status":str(e)}   
-    sql = ("DELETE FROM salas WHERE id="+user_id)
-    # print(sql)
+    sql = ("DELETE FROM salas WHERE id="+sala_id)
 
     cur.execute(sql)
     mysql.connection.commit()
 
     return {"resultado":{"status":"ok"}}
+
+#retorna todas as salas que um determinado usuário está com acesso
+@app.route('/salasAutorizadas/<user_id>', methods = ['POST'])
+def getSalasAutorizadas(user_id):
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  sql = "SELECT  s.nome, s.codigo FROM usuarios u "
+  sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
+  sql += "JOIN salas s ON aut.id_sala = s.id "
+  sql += "WHERE u.matricula = "+ user_id
+
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  columns = [column[0] for column in cur.description]
+  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  return {"status":"ok", "data":data}
 
 # Dá autorização a um usuário para entrar em determinada sala
 @app.route('/autorizarUsuario/<user_id>', methods = ['PUT', 'DELETE'])
@@ -449,6 +662,155 @@ def autorizar_usuario(user_id):
     cur.close()
     return {"status":"ok"}
 
+# Dá autorização a uma lista de usuários para entrar em uma determinada sala
+@app.route('/autorizarUsuariosPorSala/<cod_sala>', methods = ['PUT', 'DELETE'])
+def autorizarUsuariosPorSala(cod_sala):
+  logger.debug(request.json)
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e: 
+    logger.warning(str(e))
+    return {"status": str(e)}
+  
+  usuarios = request.json["usuarios"]
+  if request.method == 'PUT':
+    dataInicio = request.json["dataInicio"]
+    dataFim = request.json["dataFim"]
+    horarioInicio = request.json["horarioInicio"]
+    horarioFim = request.json["horarioFim"]
+
+    dados_para_upsert = [
+    {"id_usuario": 1, "id_sala": 1},
+    {"id_usuario": 1, "id_sala": 4},
+    {"id_usuario": 1, "id_sala": 5}
+    ]
+
+    # INSERT INTO autorizacao (id_usuario, id_sala, data_limite, data_inicio, horario_inicio, horario_fim)
+    # VALUES (%s, %s, %s, %s, %s, %s)
+    # sql = """
+    # INSERT INTO autorizacao (id_usuario, id_sala)
+    # VALUES (%s, %s)
+    # ON DUPLICATE KEY UPDATE preco = VALUES(preco)
+    # """
+    for usuario in usuarios:
+      matricula = usuario["matricula"]
+      sql = "SELECT  aut.id FROM usuarios u "
+      sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
+      sql += "JOIN salas s ON aut.id_sala = s.id "
+      sql += "WHERE u.matricula = '"+matricula+"' "
+      sql += "and s.codigo='"+cod_sala+"'"
+
+      try:
+        cur.execute(sql)
+        mysql.connection.commit()
+      except Exception as e:
+        cur.close()
+        logger.warning(str(e))
+        return {"status": str(e)}
+      
+      numResults = cur.rowcount
+
+      if numResults > 0 :
+        columns = [column[0] for column in cur.description]
+        data = [dict(zip(columns, row)) for row in cur.fetchall()]
+        logger.debug(data)
+ 
+        id = data[0]["id"]
+        logger.debug(data)
+        logger.debug(id)
+        if dataFim is None :
+          sql = "update autorizacao set data_inicio= '"+dataInicio+"', data_limite= NULL, "
+          sql += "horario_inicio= '"+horarioInicio+"', horario_fim= '"+horarioFim+"' "
+          sql += "where id='"+str(id)+"'"
+        else :
+          sql = "update autorizacao set data_limite= '"+dataFim+"',  data_inicio= '"+dataInicio+"', "
+          sql += "horario_inicio= '"+horarioInicio+"', horario_fim= '"+horarioFim+"' "
+          sql += "where id='"+str(id)+"'"
+        try:
+          cur.execute(sql)
+          mysql.connection.commit()
+        except Exception as e:
+          cur.close()
+          logger.warning(str(e))
+          return {"status": str(e)}
+      else :
+        logger.debug("vai inserir agora")
+        logger.debug(usuario)
+        sql = "insert into autorizacao (id_sala, id_usuario) "
+        sql += "select salas.id, usuarios.id from salas, usuarios "
+        sql += "where salas.codigo='"+cod_sala+"' and usuarios.matricula='"+matricula+"'"
+        logger.debug(sql)
+        try:
+          cur.execute(sql)
+          mysql.connection.commit()
+        except Exception as e:
+          cur.close()
+          logger.warning(str(e))
+          return {"status": str(e)}
+        
+        sql = "select aut.id "
+        logger.debug(numResults)
+        
+        sql = "SELECT  aut.id FROM usuarios u "
+        sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
+        sql += "JOIN salas s ON aut.id_sala = s.id "
+        sql += "WHERE u.matricula = '"+matricula+"' "
+        sql += "and s.codigo='"+cod_sala+"'"
+
+        try:
+          cur.execute(sql)
+          mysql.connection.commit()
+        except Exception as e:
+          cur.close()
+          logger.warning(str(e))
+          return {"status": str(e)}
+        
+        columns = [column[0] for column in cur.description]
+        data = [dict(zip(columns, row)) for row in cur.fetchall()]
+        id = data[0]["id"]
+        
+        if dataFim is None :
+          sql = "update autorizacao set data_inicio= '"+dataInicio+"', "
+          sql += "horario_inicio= '"+horarioInicio+"', horario_fim= '"+horarioFim+"' "
+          sql += "where id='"+str(id)+"'"
+        else :
+          sql = "update autorizacao set data_limite= '"+dataFim+"',  data_inicio= '"+dataInicio+"', "
+          sql += "horario_inicio= '"+horarioInicio+"', horario_fim= '"+horarioFim+"' "
+          sql += "where id='"+str(id)+"'"
+        
+        try:
+          cur.execute(sql)
+          mysql.connection.commit()
+        except Exception as e:
+          cur.close()
+          logger.warning(str(e))
+          return {"status": str(e)}
+
+  
+    return {"status":"ok"}
+  
+  if request.method == 'DELETE':
+    for usuario in usuarios:
+      matricula = usuario["matricula"]
+      sql = "DELETE autorizacao from autorizacao "
+      sql += "join usuarios on usuarios.id = autorizacao.id_usuario "
+      sql += "join salas on salas.id = autorizacao.id_sala  "
+      sql += "where salas.codigo='"+cod_sala+"' and usuarios.matricula='"+matricula+"'"
+      # delete autorizacao from autorizacao aut JOIN usuarios u ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id where u.matricula='' and s.codigo=''
+      # DELETE autorizacao from autorizacao join salas on salas.id = autorizacao.id_sala join usuarios on usuarios.id = autorizacao.id_usuario where salas.codigo='a208' and usuarios.matricula='1934598';
+
+      try:
+        cur.execute(sql)
+        mysql.connection.commit()
+      except Exception as e:
+        cur.close()
+        logger.warning(str(e))
+        return {"status": str(e)}
+
+    cur.close()
+    return {"status":"ok"}
+
 # retorna o número de acesso realizados hoje
 @app.route('/acessosHoje', methods = ['GET'])
 def acessos_hoje():
@@ -505,3 +867,259 @@ def acessos_data():
   
 
   return {"status":"ok", "numResults": numResults, "Dados": data}
+
+# retorna os dados de acessos realizados por um usuário em uma data específica
+@app.route('/dataAcessosPorDataPorUsuario/<user_id>', methods = ['POST'])
+def getDatasAcessosPorUsuarioPorData(user_id):
+  data_inicial = request.json["data_inicial"]
+  data_final = request.json["data_final"] 
+
+  # logger.debug("Data final")
+  # logger.debug(data_final)
+  # logger.debug("Data inicial")
+  # logger.debug(data_inicial)
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+  
+  sql = "SELECT a.timestamp, a.autorizado, s.codigo, s.nome FROM usuarios u "
+  sql += "JOIN acessos a ON u.matricula = a.usuario "
+  sql += "JOIN salas s ON a.sala = s.id "
+  sql += "WHERE u.matricula = '" + user_id + "'"
+  sql += " and DATE(a.timestamp) <= '"+data_final+"'"
+  sql += " and DATE(a.timestamp) >= '"+data_inicial+"'"
+  sql += " order by a.timestamp"
+
+  # logger.debug("SQL")
+  # logger.debug(sql)
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+  
+  columns = [column[0] for column in cur.description]
+  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  # logger.debug("Resultado")
+  # logger.debug(data)
+
+  return {"status":"ok", "data": data}
+
+# retornar o número de acessos realizados por um determinado usuário
+@app.route('/acessosPorUsuario/<user_id>', methods = ['POST'])
+def getAcessosPorUsuario(user_id):
+
+  data_inicial = request.json["data_inicial"]
+  data_final = request.json["data_final"] 
+
+  # logger.debug("Data final")
+  # logger.debug(data_final)
+  # logger.debug("Data inicial")
+  # logger.debug(data_inicial)
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  # sql = "select * from acessos where DATE(timestamp) <= '"+data_final+"'"
+  # sql += " and DATE(timestamp) >= '"+data_inicial+"'"
+
+  sql = "SELECT  a.usuario, s.codigo FROM usuarios u "
+  sql += "JOIN acessos a ON u.matricula = a.usuario "
+  sql += "JOIN salas s ON a.sala = s.id "
+  sql += "WHERE u.matricula = '" + user_id + "'"
+  sql += " and DATE(a.timestamp) <= '"+data_final+"'"
+  sql += " and DATE(a.timestamp) >= '"+data_inicial+"'"
+
+  # logger.debug("SQL")
+  # logger.debug(sql)
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  
+  columns = [column[0] for column in cur.description]
+  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  list = {}
+
+  for acesso in data:
+    if acesso["codigo"] not in list:
+      list[acesso["codigo"]] = 1
+    else:
+      temp = list[acesso["codigo"]]
+      temp = temp + 1
+      list[acesso["codigo"]] = temp
+  
+  return {"status":"ok", "data": list}
+
+# retorna os usuarios que acessaram uma sala em uma data específica
+@app.route('/getAcessosPorSala/<sala_codigo>', methods = ['POST'])
+def getAcessosPorSala(sala_codigo):
+  data_inicial = request.json["data_inicial"]
+  data_final = request.json["data_final"] 
+
+  # logger.debug("Data final")
+  # logger.debug(data_final)
+  # logger.debug("Data inicial")
+  # logger.debug(data_inicial)
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  # sql = "select * from acessos where DATE(timestamp) <= '"+data_final+"'"
+  # sql += " and DATE(timestamp) >= '"+data_inicial+"'"
+
+  sql = "SELECT  u.nome, u.matricula, a.timestamp, a.autorizado FROM usuarios u "
+  sql += "JOIN acessos a ON u.matricula = a.usuario "
+  sql += "JOIN salas s ON a.sala = s.id "
+  sql += "WHERE s.codigo = '" + sala_codigo + "'"
+  sql += " and DATE(a.timestamp) <= '"+data_final+"'"
+  sql += " and DATE(a.timestamp) >= '"+data_inicial+"'"
+  sql += " order by a.timestamp"
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  
+  columns = [column[0] for column in cur.description]
+  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+  
+  # list = {}
+
+  # for acesso in data:
+  #   if acesso["matricula"] not in list:
+  #     list[acesso["matricula"]] = 1
+  #   else:
+  #     temp = list[acesso["matricula"]]
+  #     temp = temp + 1
+  #     list[acesso["matricula"]] = temp
+  
+  return {"status":"ok", "data": data}
+
+
+# função para realizar login no sistema
+@app.route('/login', methods = ['POST'])
+def login():
+  api_url = "https://suap.ifrn.edu.br/api/"
+
+  try:
+    data = request.json
+    response = requests.post(api_url + "v2/autenticacao/token/", json=data)
+  except Exception as e:
+    logger.warning(str(e))
+    return {"status": "falha login", "erro": str(e)}
+  
+  if response.status_code == 200:
+    token = response.json().get("access")
+
+    headers = {
+        "Authorization": f'Bearer {token}'
+    }
+    try:
+      response_meus_dados = requests.get(api_url + "v2/minhas-informacoes/meus-dados/", headers=headers)
+    except Exception as e:
+      logger.warning(str(e))
+      return {"status": str(e)}
+
+    if response_meus_dados.status_code == 200:
+      logger.debug("Informações do Aluno:")
+      logger.debug(response_meus_dados.json())
+      logger.debug("")
+      logger.debug(response_meus_dados.json()["matricula"])
+      logger.debug(response_meus_dados.json()["tipo_vinculo"])
+      vinculo = response_meus_dados.json()["vinculo"]
+      logger.debug(vinculo["campus"])
+      logger.debug(token)
+
+      matricula = response_meus_dados.json()["matricula"]
+      tipo_vinculo = response_meus_dados.json()["tipo_vinculo"]
+      campus = vinculo["campus"]
+      url_foto = response_meus_dados.json()["url_foto_75x100"]
+      nome_usual = response_meus_dados.json()["nome_usual"]
+      tipo_usuario = ""
+
+      sql = "SELECT * FROM usuarios WHERE matricula = '"+ matricula +"'"
+
+      try:
+        cur = mysql.connection.cursor()
+      except Exception as e:
+        logger.warning("falha de acesso ao banco: "+str(e))
+        return {"status":str(e)}
+
+      try:
+        cur.execute(sql)
+      except Exception as e:
+        cur.close()
+        logger.warning(str(e))
+        return {"status":str(e)}
+      
+      numResults = cur.rowcount
+
+      tipo_sql = ""
+      if response_meus_dados.json()["tipo_vinculo"] == "Servidor" :
+        tipo_sql = vinculo["categoria"]
+      else:
+        tipo_sql = "aluno"
+
+      tipo_usuario = tipo_sql
+
+      if numResults == 0:
+        nome_sql = nome_usual
+        matr_sql = matricula
+        # matr_sql = "12345"
+        nivel_sql = "usuário"
+
+        logger.debug(tipo_usuario)
+        sql =       ("insert into usuarios (matricula, nome, tipoUsuario, nivelGerencia) values (%s,%s,%s,%s)")
+        d = (matr_sql, nome_sql, tipo_sql, nivel_sql)
+        logger.debug(sql % d)
+
+        try:
+          cur.execute(sql, d)
+          mysql.connection.commit()
+        except Exception as e:
+          cur.close()
+          logger.warning("falha de acesso ao banco: "+str(e))
+          return {"status":str(e)}
+
+      sql = "SELECT nivelGerencia FROM usuarios WHERE matricula = '"+ matricula +"'"      
+      try:
+        cur.execute(sql)
+        nivel_gerencia = cur.fetchall()[0][0]
+      except Exception as e:
+        cur.close()
+        logger.warning("falha de acesso ao banco: "+str(e))
+        return {"status":str(e)}
+      
+      logger.debug( nivel_gerencia )
+      cur.close()
+
+      return {"status":"ok", "data": {"token": token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipoUsuario": tipo_usuario, "foto": url_foto, "nivelGerencia": nivel_gerencia }}
+    else:
+        logger.warning(f"Erro ao obter informações. Código de status: {response_meus_dados.status_code}")
+        return{"status":"erro"}
+  else:
+    logger.warning("Erro na autenticação no suap. Verifique seu usuário e senha.")
+    return{"status": "falha_login", "erro" : "falha de comunicação com SUAP"}
+
+  return {"status":"ok", "token": token}
