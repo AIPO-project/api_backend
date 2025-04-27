@@ -1018,7 +1018,7 @@ def getAcessosPorSala(sala_codigo):
 
 # retorna os usuarios que acessaram cada uma das salas em uma data específica
 @app.route('/getTodosAcessosPorSala', methods = ['POST'])
-def getTodosAcessosPorSala(sala_codigo):
+def getTodosAcessosPorSala():
   data_inicial = request.json["data_inicial"]
   data_final = request.json["data_final"] 
 
@@ -1036,12 +1036,12 @@ def getTodosAcessosPorSala(sala_codigo):
   # sql = "select * from acessos where DATE(timestamp) <= '"+data_final+"'"
   # sql += " and DATE(timestamp) >= '"+data_inicial+"'"
 
-  sql = "SELECT  s.matricula, u.nome, u.matricula, a.timestamp, a.autorizado FROM usuarios u "
+  sql = "SELECT  s.codigo, u.nome, u.matricula, a.timestamp, a.autorizado FROM usuarios u "
   sql += "JOIN acessos a ON u.matricula = a.usuario "
   sql += "JOIN salas s ON a.sala = s.id "
   sql += "WHERE DATE(a.timestamp) <= '"+data_final+"'"
   sql += " and DATE(a.timestamp) >= '"+data_inicial+"'"
-  sql += " order by s.matricula, a.timestamp"
+  sql += " order by s.codigo, a.timestamp"
 
   try:
     cur.execute(sql)
@@ -1057,12 +1057,12 @@ def getTodosAcessosPorSala(sala_codigo):
   list = {}
 
   for acesso in data:
-    if acesso["matricula"] not in list:
-      list[acesso["matricula"]] = 1
+    if acesso["codigo"] not in list:
+      list[acesso["codigo"]] = 1
     else:
-      temp = list[acesso["matricula"]]
+      temp = list[acesso["codigo"]]
       temp = temp + 1
-      list[acesso["matricula"]] = temp
+      list[acesso["codigo"]] = temp
   
   return {"status":"ok", "data": data, "numAccess": list}
 
