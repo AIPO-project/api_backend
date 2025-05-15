@@ -87,7 +87,7 @@ def add_data():
     logger.warning("falha de acesso ao banco: "+str(e))
     return {"status":str(e)}
 
-  logger.debug (request.json)
+  # logger.debug (request.json)
   nome          = request.json["nome"]
   matricula     = request.json["matricula"]
   tipoUsuario   = request.json['tipoUsuario']
@@ -95,7 +95,7 @@ def add_data():
   #            insert into usuarios (matricula, nome, tipoUsuario, nivelGerencia) values ("  009876   ","   len","             ","               ")
   sql =       ("insert into usuarios (matricula, nome, tipoUsuario, nivelGerencia) values (%s,%s,%s,%s)")
   d = (matricula, nome, tipoUsuario, nivelGerencia)
-  logger.debug(sql % d)
+  # logger.debug(sql % d)
 
   try:
     cur.execute(sql, d)
@@ -192,7 +192,7 @@ def getUsuariosPorSala(codigo_sala):
 
   data = {"allHours": acessoTodosHorarios, "limitedHours": acessoHorariosLimitados}
 
-  logger.debug(data)
+  # logger.debug(data)
 
   # for d in data:
   #   temp[d["usuarios"]] = []
@@ -218,7 +218,7 @@ def getUsuariosForaSala(codigo_sala):
   # sql = "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
   # sql += "JOIN autorizacao aut ON u.id = aut.id_usuario "
   # sql += "JOIN salas s ON aut.id_sala = s.id"
-  logger.debug(codigo_sala)
+  # logger.debug(codigo_sala)
   sql =  "SELECT  u.matricula, u.nome, u.tipoUsuario, u.nivelGerencia, u.ativo FROM usuarios u "
   sql += "JOIN autorizacao aut ON u.id = aut.id_usuario JOIN salas s ON aut.id_sala = s.id "
   sql += "where s.codigo!='"+codigo_sala+"' or (s.codigo='"+codigo_sala+"' "
@@ -320,7 +320,7 @@ def data(user_id):
     columns = [column[0] for column in cur.description]
     data = [dict(zip(columns, row)) for row in cur.fetchall()]
 
-    logger.debug(str(data))
+    # logger.debug(str(data))
 
     return {"status": "ok", "data": data}
   if request.method == 'DELETE':
@@ -1116,13 +1116,13 @@ def login():
 
     if response_meus_dados.status_code == 200:
       logger.debug("Informações do Aluno:")
-      logger.debug(response_meus_dados.json())
+      # logger.debug(response_meus_dados.json())
       logger.debug("")
       logger.debug(response_meus_dados.json()["matricula"])
-      logger.debug(response_meus_dados.json()["tipo_vinculo"])
+      # logger.debug(response_meus_dados.json()["tipo_vinculo"])
       vinculo = response_meus_dados.json()["vinculo"]
       logger.debug(vinculo["campus"])
-      logger.debug(token)
+      # logger.debug(token)
 
       matricula = response_meus_dados.json()["matricula"]
       tipo_vinculo = response_meus_dados.json()["tipo_vinculo"]
@@ -1162,10 +1162,10 @@ def login():
         # matr_sql = "12345"
         nivel_sql = "usuário"
 
-        logger.debug(tipo_usuario)
+        # logger.debug(tipo_usuario)
         sql =       ("insert into usuarios (matricula, nome, tipoUsuario, nivelGerencia) values (%s,%s,%s,%s)")
         d = (matr_sql, nome_sql, tipo_sql, nivel_sql)
-        logger.debug(sql % d)
+        # logger.debug(sql % d)
 
         try:
           cur.execute(sql, d)
@@ -1184,7 +1184,7 @@ def login():
         logger.warning("falha de acesso ao banco: "+str(e))
         return {"status":str(e)}
       
-      logger.debug( nivel_gerencia )
+      # logger.debug( nivel_gerencia )
       cur.close()
 
       return {"status":"ok", "data": {"token": token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipoUsuario": tipo_usuario, "foto": url_foto, "nivelGerencia": nivel_gerencia }}
