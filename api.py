@@ -1016,6 +1016,79 @@ def getAcessosPorSala(sala_codigo):
   
   return {"status":"ok", "data": data}
 
+# retorna os usuarios que acessaram cada uma das salas em uma data específica
+@app.route('/getTodosAcessosPorSala', methods = ['POST'])
+def getTodosAcessosPorSala():
+  data_inicial = request.json["data_inicial"]
+  data_final = request.json["data_final"] 
+
+  # logger.debug("Data final")
+  # logger.debug(data_final)
+  # logger.debug("Data inicial")
+  # logger.debug(data_inicial)
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  # sql = "select * from acessos where DATE(timestamp) <= '"+data_final+"'"
+  # sql += " and DATE(timestamp) >= '"+data_inicial+"'"
+
+  sql = "SELECT  s.codigo, u.nome, u.matricula, a.timestamp, a.autorizado FROM usuarios u "
+  sql += "JOIN acessos a ON u.matricula = a.usuario "
+  sql += "JOIN salas s ON a.sala = s.id "
+  sql += "WHERE DATE(a.timestamp) <= '"+data_final+"'"
+  sql += " and DATE(a.timestamp) >= '"+data_inicial+"'"
+  sql += " order by s.codigo, a.timestamp"
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  
+  columns = [column[0] for column in cur.description]
+  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+  
+  list = {}
+
+  for acesso in data:
+    if acesso["codigo"] not in list:
+      list[acesso["codigo"]] = 1
+    else:
+      temp = list[acesso["codigo"]]
+      temp = temp + 1
+      list[acesso["codigo"]] = temp
+  
+  return {"status":"ok", "data": data, "numAccess": list}
+
+@app.route('/getUsuariosAtivos', methods = ['GET'])
+def getNumeroUsuariosAtivos():
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  sql = "SELECT * FROM usuarios where ativo=1"
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+  
+  
+  columns = [column[0] for column in cur.description]
+  users = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  return {"status":"ok", "users":users}
 
 # função para realizar login no sistema
 @app.route('/login', methods = ['POST'])
