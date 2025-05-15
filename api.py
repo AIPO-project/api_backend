@@ -1066,6 +1066,29 @@ def getTodosAcessosPorSala():
   
   return {"status":"ok", "data": data, "numAccess": list}
 
+@app.route('/getUsuariosAtivos', methods = ['GET'])
+def getNumeroUsuariosAtivos():
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+
+  sql = "SELECT * FROM usuarios where ativo=1"
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+  
+  
+  columns = [column[0] for column in cur.description]
+  users = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  return {"status":"ok", "users":users}
 
 # função para realizar login no sistema
 @app.route('/login', methods = ['POST'])
