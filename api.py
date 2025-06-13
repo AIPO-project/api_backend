@@ -378,6 +378,40 @@ def serialAvailable():
     return {"status":"problemas ao abrir a porta serial"}
   return  {"status":"ok"}
 
+@app.route('/setChave/<user_id>', methods = ['PUT'])
+def setChave2(user_id):
+  try:
+    data = request.json
+  except Exception as e:  
+    logger.warning("dados não enviados pelo cliente: "+str(e))
+    return {"status":str(e)}
+  
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+  
+  chave = data["chave"]
+  # logger.debug(chave)
+  # chave = "AA AA AA CC"
+
+  sql  = "UPDATE usuarios SET chave='"+ chave +"' WHERE matricula="+user_id
+  logger.debug(sql)
+
+  try:
+    cur.execute(sql)
+    mysql.connection.commit()
+  except Exception as e:
+    cur.close()
+    logger.debug(str(e))
+    return {"status": str(e)}    
+
+  cur.close()
+  
+  return {"status":"ok"}
+
+
 # Utilizado para atualizar a chave de um usuário
 @app.route('/chave/<user_id>', methods = ['PUT'])
 def setChave(user_id):
