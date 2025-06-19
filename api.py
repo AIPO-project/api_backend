@@ -83,7 +83,9 @@ def get_data():
 
 # Usado para adicionar um novo usuário ao banco
 @app.route('/adicionarUsuarios', methods = [ 'POST'])
+@jwt_required()
 def add_data():
+  # current_user = get_jwt_identity()
   try:
     cur = mysql.connection.cursor()
   except Exception as e:
