@@ -544,6 +544,7 @@ def getSalas():
 
 # adiciona uma nova sala ao banco
 @app.route('/adicionarSala', methods = [ 'POST'])
+@jwt_required()
 def add_sala():
   try:
     cur = mysql.connection.cursor()
