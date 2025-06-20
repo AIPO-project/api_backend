@@ -74,6 +74,10 @@ def log_database(funcaoAPI, usuarioAtingido, descricao):
 
   cur.close()
 
+@jwt.expired_token_loader
+def my_expired_token_callback(jwt_header, jwt_payload):
+    return {"status":"Token has expired"}, 401
+
 # Usado unica e exclusivamente para testes
 @app.route('/time')
 def get_current_time():
