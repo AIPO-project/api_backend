@@ -11,7 +11,7 @@ from datetime import datetime
 import logging
 import os #utilizado para pegar os valores que estão na variável de ambiente
 from dotenv import load_dotenv
-from flask_jwt_extended import create_access_token, JWTManager, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, JWTManager, jwt_required, get_jwt_identity, get_jwt
 
 app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = "super-secret"
@@ -85,7 +85,7 @@ def get_data():
 @app.route('/adicionarUsuarios', methods = [ 'POST'])
 @jwt_required()
 def add_data():
-  # current_user = get_jwt_identity()
+  
   try:
     cur = mysql.connection.cursor()
   except Exception as e:
@@ -1170,8 +1170,6 @@ def login():
       nome_usual = response_meus_dados.json()["nome_usual"]
       tipo_usuario = ""
 
-      access_token = create_access_token(identity=matricula)
-
       sql = "SELECT * FROM usuarios WHERE matricula = '"+ matricula +"'"
 
       try:
@@ -1227,6 +1225,11 @@ def login():
       
       # logger.debug( nivel_gerencia )
       cur.close()
+
+      user_roles = {"nivelGerencia": nivel_gerencia, "tipoUsuario": tipo_usuario}
+      access_token = create_access_token(identity=matricula, additional_claims={"roles": user_roles})
+      # access_token = create_access_token(identity=user_id, additional_claims={"roles": user_roles})
+      
       return {"status":"ok", "data": {"token": token, "token_local": access_token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipoUsuario": tipo_usuario, "foto": url_foto, "nivelGerencia": nivel_gerencia }}
     else:
         logger.warning(f"Erro ao obter informações. Código de status: {response_meus_dados.status_code}")
