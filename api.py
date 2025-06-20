@@ -51,6 +51,29 @@ app.config['MYSQL_PORT'] = int(os.getenv("MYSQL_PORT"))
 
 mysql = MySQL(app)
 
+def log_database(funcaoAPI, usuarioAtingido, descricao):
+  usuarioAtual = get_jwt_identity()
+  claims = get_jwt()
+  roles = claims.get("roles")
+  nivelGerencia = roles["nivelGerencia"]
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+
+  sql = " INSERT INTO dataLog (usuarioAcao, tipoAcao, alvoAcao, descricao, nivelGerencia) VALUES (%s, %s, %s, %s, %s)"
+  dados = (usuarioAtual, funcaoAPI, usuarioAtingido, descricao, nivelGerencia)
+  
+  try:
+    cur.execute(sql, dados)
+    mysql.connection.commit()
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+
+  cur.close()
+
 # Usado unica e exclusivamente para testes
 @app.route('/time')
 def get_current_time():
@@ -111,6 +134,8 @@ def add_data():
     return {"status":str(e)}
 
   cur.close()
+
+  log_database("adicionarUsuarios", matricula, "")
   
   return {"status":"ok"}
 
