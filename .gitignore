@@ -20,3 +20,5 @@ venv/
 aipo_02.sql
 
 *.log
+
+.env_producao
