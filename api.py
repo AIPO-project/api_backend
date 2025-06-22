@@ -14,8 +14,6 @@ from dotenv import load_dotenv
 from flask_jwt_extended import create_access_token, JWTManager, jwt_required, get_jwt_identity, get_jwt
 
 app = Flask(__name__)
-app.config["JWT_SECRET_KEY"] = "super-secret"
-jwt = JWTManager(app)
 CORS(app)
 load_dotenv() #carrega as variveis de ambiente
 
@@ -48,7 +46,9 @@ app.config['MYSQL_USER'] = os.getenv("MYSQL_USER")
 app.config['MYSQL_PASSWORD'] = os.getenv("MYSQL_PASSWORD")
 app.config['MYSQL_DB'] = os.getenv("MYSQL_DATABASE")
 app.config['MYSQL_PORT'] = int(os.getenv("MYSQL_PORT"))
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
+jwt = JWTManager(app)
 mysql = MySQL(app)
 
 def log_database(funcaoAPI, usuarioAtingido, descricao):
