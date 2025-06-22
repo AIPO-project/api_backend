@@ -11,10 +11,14 @@ from datetime import datetime
 import logging
 import os #utilizado para pegar os valores que estão na variável de ambiente
 from dotenv import load_dotenv
-from flask_jwt_extended import create_access_token, JWTManager, jwt_required, get_jwt_identity, get_jwt
+from flask_jwt_extended import (
+  create_access_token, JWTManager, jwt_required, 
+  get_jwt_identity, get_jwt, unset_jwt_cookies,
+  create_refresh_token, set_access_cookies, set_refresh_cookies
+  )
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
 load_dotenv() #carrega as variveis de ambiente
 
 logger = logging.getLogger("AIPO_API")
@@ -47,6 +51,15 @@ app.config['MYSQL_PASSWORD'] = os.getenv("MYSQL_PASSWORD")
 app.config['MYSQL_DB'] = os.getenv("MYSQL_DATABASE")
 app.config['MYSQL_PORT'] = int(os.getenv("MYSQL_PORT"))
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
+app.config['JWT_COOKIE_SECURE'] = os.getenv("JWT_COOKIE_SECURE")
+app.config['JWT_ACCESS_COOKIE_PATH'] = os.getenv("JWT_ACCESS_COOKIE_PATH")
+app.config['JWT_REFRESH_COOKIE_PATH'] = '/token/refresh'
+app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+# Enable csrf double submit protection. See this for a thorough
+# explanation: http://www.redotheweb.com/2015/11/09/api-security.html
+app.config['JWT_COOKIE_CSRF_PROTECT'] = True
+
+
 
 jwt = JWTManager(app)
 mysql = MySQL(app)
