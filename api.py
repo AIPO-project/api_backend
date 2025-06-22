@@ -2,6 +2,7 @@ import time
 import json
 from flask import Flask
 from flask import request
+from flask import jsonify
 import requests
 from flask_cors import CORS
 from flask_mysqldb import MySQL
@@ -1271,9 +1272,13 @@ def login():
 
       user_roles = {"nivelGerencia": nivel_gerencia, "tipoUsuario": tipo_usuario}
       access_token = create_access_token(identity=matricula, additional_claims={"roles": user_roles})
-      # access_token = create_access_token(identity=user_id, additional_claims={"roles": user_roles})
-      
-      return {"status":"ok", "data": {"token": token, "token_local": access_token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipoUsuario": tipo_usuario, "foto": url_foto, "nivelGerencia": nivel_gerencia }}
+      refresh_token = create_refresh_token(identity=matricula, additional_claims={"roles": user_roles})
+
+      response = jsonify({"status":"ok", "data": {"token": token, "token_local": access_token, "refresh_token": refresh_token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipoUsuario": tipo_usuario, "foto": url_foto, "nivelGerencia": nivel_gerencia }})
+      set_access_cookies(response, access_token)
+      set_refresh_cookies(response, refresh_token)
+      logger.debug(response.get_data(as_text=True))    
+      return response
     else:
         logger.warning(f"Erro ao obter informações. Código de status: {response_meus_dados.status_code}")
         return{"status":"erro"}
@@ -1282,3 +1287,11 @@ def login():
     return{"status": "falha_login", "erro" : "falha de comunicação com SUAP"}
 
   return {"status":"ok", "token": token}
+
+# função para realizar logout do sistema
+@app.route('/logout', methods = ['POST'])
+def logout():
+  response = jsonify(status='ok')
+  unset_jwt_cookies(response)
+  # logger.debug(response.get_data(as_text=True))
+  return response
