@@ -1277,7 +1277,7 @@ def login():
       response = jsonify({"status":"ok", "data": {"token": token, "token_local": access_token, "refresh_token": refresh_token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipoUsuario": tipo_usuario, "foto": url_foto, "nivelGerencia": nivel_gerencia }})
       set_access_cookies(response, access_token)
       set_refresh_cookies(response, refresh_token)
-      logger.debug(response.get_data(as_text=True))    
+      # logger.debug(response.get_data(as_text=True))    
       return response
     else:
         logger.warning(f"Erro ao obter informações. Código de status: {response_meus_dados.status_code}")
