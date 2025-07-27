@@ -47,6 +47,7 @@ app.config['MYSQL_DB'] = os.getenv("MYSQL_DATABASE")
 app.config['MYSQL_PORT'] = int(os.getenv("MYSQL_PORT"))
 
 mysql = MySQL(app)
+token_refresh =""
 
 # Usado unica e exclusivamente para testes
 @app.route('/time')
@@ -108,6 +109,40 @@ def add_data():
   cur.close()
   
   return {"status":"ok"}
+
+# Usado para adicionar um novo usuário ao banco
+@app.route('/adicionarUsuarioSUAP', methods = [ 'GET'])
+def addUsuarioSUAP():
+  global token_refresh
+
+  api_url_refresh = "https://suap.ifrn.edu.br/api/token/refresh"
+
+  payload = {"refresh": token_refresh}
+  response_refresh = requests.post(api_url_refresh, json=payload)
+  print(response_refresh.json())
+
+  if response_refresh.status_code == 200:
+
+    token = response_refresh.json()["access"]
+    token_refresh = response_refresh.json()["refresh"]
+
+    api_url = "https://suap.ifrn.edu.br/api/edu/dados-aluno-matriculado/?matricula=20231170280019"
+
+    headers = {
+      "Authorization": f'Bearer {token}'
+    }
+
+    response_meus_dados = requests.get(api_url, headers=headers)
+
+    if response_meus_dados.status_code == 200:
+      print("Comunicação deu certo:") 
+      print(response_meus_dados.json()["nome"])
+      nome = response_meus_dados.json()["nome"]
+      matricula = response_meus_dados.json()["matricula"]
+
+      return {"status":"ok", "dados": {"matricula":matricula, "nome":nome}}
+    return {"status":response_meus_dados.status_code}
+  return {"status":response_refresh.status_code}
 
 # Usado para retornar uma lista de salas autorizadas para usuarios
 @app.route('/UsuariosSalas', methods = ['GET'])
@@ -1137,6 +1172,8 @@ def login():
     return {"status": "falha login", "erro": str(e)}
   
   if response.status_code == 200:
+    global token_refresh
+    token_refresh = response.json().get("refresh")
     token = response.json().get("access")
 
     headers = {
