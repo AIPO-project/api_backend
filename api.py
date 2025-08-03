@@ -119,7 +119,6 @@ def procurarUsuarioSUAP(matricula):
 
   payload = {"refresh": token_refresh}
   response_refresh = requests.post(api_url_refresh, json=payload)
-  print(matricula) #20231170280019
 
   if response_refresh.status_code == 200:
 
@@ -141,7 +140,11 @@ def procurarUsuarioSUAP(matricula):
       matricula = response_meus_dados.json()["matricula"]
 
       return {"status":"ok", "dados": {"matricula":matricula, "nome":nome}}
-    return {"status":response_meus_dados.status_code}
+    elif response_meus_dados.status_code == 400 or response_meus_dados.status_code == 404:
+      print("passei aqui")
+      return {"status":"usuário não encontrado", "erro":response_meus_dados.status_code}
+    else:
+      return {"status":response_meus_dados.status_code}
   return {"status":response_refresh.status_code}
 
 # Usado para retornar uma lista de salas autorizadas para usuarios
