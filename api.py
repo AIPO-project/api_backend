@@ -111,22 +111,22 @@ def add_data():
   return {"status":"ok"}
 
 # Usado para adicionar um novo usuário ao banco
-@app.route('/adicionarUsuarioSUAP', methods = [ 'GET'])
-def addUsuarioSUAP():
+@app.route('/procurarUsuarioSUAP/<matricula>', methods = [ 'GET'])
+def procurarUsuarioSUAP(matricula):
   global token_refresh
 
   api_url_refresh = "https://suap.ifrn.edu.br/api/token/refresh"
 
   payload = {"refresh": token_refresh}
   response_refresh = requests.post(api_url_refresh, json=payload)
-  print(response_refresh.json())
+  print(matricula) #20231170280019
 
   if response_refresh.status_code == 200:
 
     token = response_refresh.json()["access"]
     token_refresh = response_refresh.json()["refresh"]
 
-    api_url = "https://suap.ifrn.edu.br/api/edu/dados-aluno-matriculado/?matricula=20231170280019"
+    api_url = "https://suap.ifrn.edu.br/api/edu/dados-aluno-matriculado/?matricula="+matricula
 
     headers = {
       "Authorization": f'Bearer {token}'
