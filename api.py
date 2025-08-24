@@ -93,6 +93,20 @@ def add_data():
   matricula     = request.json["matricula"]
   tipoUsuario   = request.json['tipoUsuario']
   nivelGerencia = request.json['nivelGerencia']
+
+  sql_select =  "select * from usuarios where matricula="+matricula
+
+  try:
+    cur.execute(sql_select)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+  
+  if cur.rowcount > 0 :
+    return {"status":" Usuario já presente no banco"} # erro quando um usário já estiver no banco.
+
+
   #            insert into usuarios (matricula, nome, tipoUsuario, nivelGerencia) values ("  009876   ","   len","             ","               ")
   sql =       ("insert into usuarios (matricula, nome, tipoUsuario, nivelGerencia) values (%s,%s,%s,%s)")
   d = (matricula, nome, tipoUsuario, nivelGerencia)
