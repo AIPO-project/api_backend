@@ -11,6 +11,7 @@ from datetime import datetime
 import logging
 import os #utilizado para pegar os valores que estão na variável de ambiente
 from dotenv import load_dotenv
+from flask_jwt_extended import create_access_token, JWTManager, jwt_required, get_jwt_identity, get_jwt
 
 app = Flask(__name__)
 CORS(app)
@@ -45,9 +46,38 @@ app.config['MYSQL_USER'] = os.getenv("MYSQL_USER")
 app.config['MYSQL_PASSWORD'] = os.getenv("MYSQL_PASSWORD")
 app.config['MYSQL_DB'] = os.getenv("MYSQL_DATABASE")
 app.config['MYSQL_PORT'] = int(os.getenv("MYSQL_PORT"))
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
+jwt = JWTManager(app)
 mysql = MySQL(app)
 token_refresh =""
+
+def log_database(funcaoAPI, usuarioAtingido, descricao):
+  usuarioAtual = get_jwt_identity()
+  claims = get_jwt()
+  roles = claims.get("roles")
+  nivelGerencia = roles["nivelGerencia"]
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+
+  sql = " INSERT INTO dataLog (usuarioAcao, tipoAcao, alvoAcao, descricao, nivelGerencia) VALUES (%s, %s, %s, %s, %s)"
+  dados = (usuarioAtual, funcaoAPI, usuarioAtingido, descricao, nivelGerencia)
+  
+  try:
+    cur.execute(sql, dados)
+    mysql.connection.commit()
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+
+  cur.close()
+
+@jwt.expired_token_loader
+def my_expired_token_callback(jwt_header, jwt_payload):
+    return {"status":"Token has expired"}, 401
 
 # Usado unica e exclusivamente para testes
 @app.route('/time')
@@ -55,8 +85,13 @@ def get_current_time():
   # logger.debug("teste")
   return {'time': time.time()}
 
+# @app.route('/usuarios_free', methods = ['GET', 'POST'])
+# def get_usuarios():
+#   return get_data()
+
 # Usado para retornar lista de usuários
 @app.route('/usuarios', methods = ['GET', 'POST'])
+@jwt_required()
 def get_data():
   if request.method == 'GET':
     try:
@@ -81,7 +116,9 @@ def get_data():
 
 # Usado para adicionar um novo usuário ao banco
 @app.route('/adicionarUsuarios', methods = [ 'POST'])
+@jwt_required()
 def add_data():
+  
   try:
     cur = mysql.connection.cursor()
   except Exception as e:
@@ -107,6 +144,8 @@ def add_data():
     return {"status":str(e)}
 
   cur.close()
+
+  log_database("adicionarUsuarios", matricula, "")
   
   return {"status":"ok"}
 
@@ -548,6 +587,7 @@ def getSalas():
 
 # adiciona uma nova sala ao banco
 @app.route('/adicionarSala', methods = [ 'POST'])
+@jwt_required()
 def add_sala():
   try:
     cur = mysql.connection.cursor()
@@ -1261,7 +1301,11 @@ def login():
       # logger.debug( nivel_gerencia )
       cur.close()
 
-      return {"status":"ok", "data": {"token": token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipoUsuario": tipo_usuario, "foto": url_foto, "nivelGerencia": nivel_gerencia }}
+      user_roles = {"nivelGerencia": nivel_gerencia, "tipoUsuario": tipo_usuario}
+      access_token = create_access_token(identity=matricula, additional_claims={"roles": user_roles})
+      # access_token = create_access_token(identity=user_id, additional_claims={"roles": user_roles})
+      
+      return {"status":"ok", "data": {"token": token, "token_local": access_token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipoUsuario": tipo_usuario, "foto": url_foto, "nivelGerencia": nivel_gerencia }}
     else:
         logger.warning(f"Erro ao obter informações. Código de status: {response_meus_dados.status_code}")
         return{"status":"erro"}
