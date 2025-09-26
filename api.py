@@ -84,8 +84,13 @@ def get_current_time():
   # logger.debug("teste")
   return {'time': time.time()}
 
+# @app.route('/usuarios_free', methods = ['GET', 'POST'])
+# def get_usuarios():
+#   return get_data()
+
 # Usado para retornar lista de usuários
 @app.route('/usuarios', methods = ['GET', 'POST'])
+@jwt_required()
 def get_data():
   if request.method == 'GET':
     try:
