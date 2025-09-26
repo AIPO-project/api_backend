@@ -151,12 +151,16 @@ def add_data():
 
 # Usado para adicionar um novo usuário ao banco
 @app.route('/procurarUsuarioSUAP/<matricula>', methods = [ 'GET'])
+@jwt_required()
 def procurarUsuarioSUAP(matricula):
   global token_refresh
 
   api_url_refresh = "https://suap.ifrn.edu.br/api/token/refresh"
 
-  payload = {"refresh": token_refresh}
+  claims = get_jwt()
+  token_refresh_suap = claims["token_refresh_suap"]
+  logger.debug(token_refresh_suap)
+  payload = {"refresh": token_refresh_suap}
   response_refresh = requests.post(api_url_refresh, json=payload)
 
   if response_refresh.status_code == 200:
@@ -1216,7 +1220,9 @@ def login():
   
   if response.status_code == 200:
     global token_refresh
-    token_refresh = response.json().get("refresh")
+    
+    token_refresh_suap = response.json().get("refresh")
+    token_refresh = token_refresh_suap
     token = response.json().get("access")
 
     headers = {
@@ -1302,7 +1308,7 @@ def login():
       cur.close()
 
       user_roles = {"nivelGerencia": nivel_gerencia, "tipoUsuario": tipo_usuario}
-      access_token = create_access_token(identity=matricula, additional_claims={"roles": user_roles})
+      access_token = create_access_token(identity=matricula, additional_claims={"roles": user_roles, "token_refresh_suap": token_refresh_suap})
       # access_token = create_access_token(identity=user_id, additional_claims={"roles": user_roles})
       
       return {"status":"ok", "data": {"token": token, "token_local": access_token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipoUsuario": tipo_usuario, "foto": url_foto, "nivelGerencia": nivel_gerencia }}
