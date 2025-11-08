@@ -50,7 +50,7 @@ app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
 jwt = JWTManager(app)
 mysql = MySQL(app)
-token_refresh =""
+# token_refresh =""
 
 def log_database(funcaoAPI, usuarioAtingido, descricao):
   usuarioAtual = get_jwt_identity()
@@ -93,6 +93,7 @@ def get_current_time():
 @app.route('/usuarios', methods = ['GET', 'POST'])
 @jwt_required()
 def get_data():
+  logger.debug("Usuarios");
   if request.method == 'GET':
     try:
       cur = mysql.connection.cursor()
@@ -153,7 +154,7 @@ def add_data():
 @app.route('/procurarUsuarioSUAP/<matricula>', methods = [ 'GET'])
 @jwt_required()
 def procurarUsuarioSUAP(matricula):
-  global token_refresh
+  # global token_refresh
 
   api_url_refresh = "https://suap.ifrn.edu.br/api/token/refresh"
 
@@ -166,7 +167,7 @@ def procurarUsuarioSUAP(matricula):
   if response_refresh.status_code == 200:
 
     token = response_refresh.json()["access"]
-    token_refresh = response_refresh.json()["refresh"]
+    # token_refresh = response_refresh.json()["refresh"]
 
     api_url = "https://suap.ifrn.edu.br/api/edu/dados-aluno-matriculado/?matricula="+matricula
 
@@ -1219,10 +1220,10 @@ def login():
     return {"status": "falha login", "erro": str(e)}
   
   if response.status_code == 200:
-    global token_refresh
+    # global token_refresh
     
     token_refresh_suap = response.json().get("refresh")
-    token_refresh = token_refresh_suap
+    # token_refresh = token_refresh_suap
     token = response.json().get("access")
 
     headers = {
