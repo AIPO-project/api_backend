@@ -7,6 +7,7 @@ from flask_cors import CORS
 from flask_mysqldb import MySQL
 import serial
 from datetime import datetime
+from datetime import timedelta
 
 import logging
 import os #utilizado para pegar os valores que estão na variável de ambiente
@@ -1309,7 +1310,8 @@ def login():
       cur.close()
 
       user_roles = {"nivelGerencia": nivel_gerencia, "tipoUsuario": tipo_usuario}
-      access_token = create_access_token(identity=matricula, additional_claims={"roles": user_roles, "token_refresh_suap": token_refresh_suap})
+      tempo_de_expiracao_curto = timedelta(minutes=60)
+      access_token = create_access_token(identity=matricula, additional_claims={"roles": user_roles, "token_refresh_suap": token_refresh_suap}, expires_delta=tempo_de_expiracao_curto)
       # access_token = create_access_token(identity=user_id, additional_claims={"roles": user_roles})
       
       return {"status":"ok", "data": {"token": token, "token_local": access_token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipoUsuario": tipo_usuario, "foto": url_foto, "nivelGerencia": nivel_gerencia }}
