@@ -7,10 +7,12 @@ from flask_cors import CORS
 from flask_mysqldb import MySQL
 import serial
 from datetime import datetime
+from datetime import timedelta
 
 import logging
 import os #utilizado para pegar os valores que estão na variável de ambiente
 from dotenv import load_dotenv
+from flask_jwt_extended import create_access_token, JWTManager, jwt_required, get_jwt_identity, get_jwt
 
 app = Flask(__name__)
 CORS(app)
@@ -45,8 +47,38 @@ app.config['MYSQL_USER'] = os.getenv("MYSQL_USER")
 app.config['MYSQL_PASSWORD'] = os.getenv("MYSQL_PASSWORD")
 app.config['MYSQL_DB'] = os.getenv("MYSQL_DATABASE")
 app.config['MYSQL_PORT'] = int(os.getenv("MYSQL_PORT"))
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
+jwt = JWTManager(app)
 mysql = MySQL(app)
+# token_refresh =""
+
+def log_database(funcaoAPI, usuarioAtingido, descricao):
+  usuarioAtual = get_jwt_identity()
+  claims = get_jwt()
+  roles = claims.get("roles")
+  nivelGerencia = roles["nivelGerencia"]
+
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+
+  sql = " INSERT INTO dataLog (usuarioAcao, tipoAcao, alvoAcao, descricao, nivelGerencia) VALUES (%s, %s, %s, %s, %s)"
+  dados = (usuarioAtual, funcaoAPI, usuarioAtingido, descricao, nivelGerencia)
+  
+  try:
+    cur.execute(sql, dados)
+    mysql.connection.commit()
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+
+  cur.close()
+
+@jwt.expired_token_loader
+def my_expired_token_callback(jwt_header, jwt_payload):
+    return {"status":"Token has expired"}, 401
 
 # Usado unica e exclusivamente para testes
 @app.route('/time')
@@ -54,9 +86,15 @@ def get_current_time():
   # logger.debug("teste")
   return {'time': time.time()}
 
+# @app.route('/usuarios_free', methods = ['GET', 'POST'])
+# def get_usuarios():
+#   return get_data()
+
 # Usado para retornar lista de usuários
 @app.route('/usuarios', methods = ['GET', 'POST'])
+@jwt_required()
 def get_data():
+  logger.debug("Usuarios");
   if request.method == 'GET':
     try:
       cur = mysql.connection.cursor()
@@ -80,7 +118,9 @@ def get_data():
 
 # Usado para adicionar um novo usuário ao banco
 @app.route('/adicionarUsuarios', methods = [ 'POST'])
+@jwt_required()
 def add_data():
+  
   try:
     cur = mysql.connection.cursor()
   except Exception as e:
@@ -106,8 +146,51 @@ def add_data():
     return {"status":str(e)}
 
   cur.close()
+
+  log_database("adicionarUsuarios", matricula, "")
   
   return {"status":"ok"}
+
+# Usado para adicionar um novo usuário ao banco
+@app.route('/procurarUsuarioSUAP/<matricula>', methods = [ 'GET'])
+@jwt_required()
+def procurarUsuarioSUAP(matricula):
+  # global token_refresh
+
+  api_url_refresh = "https://suap.ifrn.edu.br/api/token/refresh"
+
+  claims = get_jwt()
+  token_refresh_suap = claims["token_refresh_suap"]
+  logger.debug(token_refresh_suap)
+  payload = {"refresh": token_refresh_suap}
+  response_refresh = requests.post(api_url_refresh, json=payload)
+
+  if response_refresh.status_code == 200:
+
+    token = response_refresh.json()["access"]
+    # token_refresh = response_refresh.json()["refresh"]
+
+    api_url = "https://suap.ifrn.edu.br/api/edu/dados-aluno-matriculado/?matricula="+matricula
+
+    headers = {
+      "Authorization": f'Bearer {token}'
+    }
+
+    response_meus_dados = requests.get(api_url, headers=headers)
+
+    if response_meus_dados.status_code == 200:
+      print("Comunicação deu certo:") 
+      print(response_meus_dados.json()["nome"])
+      nome = response_meus_dados.json()["nome"]
+      matricula = response_meus_dados.json()["matricula"]
+
+      return {"status":"ok", "dados": {"matricula":matricula, "nome":nome}}
+    elif response_meus_dados.status_code == 400 or response_meus_dados.status_code == 404:
+      print("passei aqui")
+      return {"status":"usuário não encontrado", "erro":response_meus_dados.status_code}
+    else:
+      return {"status":response_meus_dados.status_code}
+  return {"status":response_refresh.status_code}
 
 # Usado para retornar uma lista de salas autorizadas para usuarios
 @app.route('/UsuariosSalas', methods = ['GET'])
@@ -510,6 +593,7 @@ def getSalas():
 
 # adiciona uma nova sala ao banco
 @app.route('/adicionarSala', methods = [ 'POST'])
+@jwt_required()
 def add_sala():
   try:
     cur = mysql.connection.cursor()
@@ -1137,6 +1221,10 @@ def login():
     return {"status": "falha login", "erro": str(e)}
   
   if response.status_code == 200:
+    # global token_refresh
+    
+    token_refresh_suap = response.json().get("refresh")
+    # token_refresh = token_refresh_suap
     token = response.json().get("access")
 
     headers = {
@@ -1221,7 +1309,12 @@ def login():
       # logger.debug( nivel_gerencia )
       cur.close()
 
-      return {"status":"ok", "data": {"token": token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipoUsuario": tipo_usuario, "foto": url_foto, "nivelGerencia": nivel_gerencia }}
+      user_roles = {"nivelGerencia": nivel_gerencia, "tipoUsuario": tipo_usuario}
+      tempo_de_expiracao_curto = timedelta(minutes=60)
+      access_token = create_access_token(identity=matricula, additional_claims={"roles": user_roles, "token_refresh_suap": token_refresh_suap}, expires_delta=tempo_de_expiracao_curto)
+      # access_token = create_access_token(identity=user_id, additional_claims={"roles": user_roles})
+      
+      return {"status":"ok", "data": {"token": token, "token_local": access_token, "matricula": matricula, "nome_usual": nome_usual, "campus": campus, "tipoUsuario": tipo_usuario, "foto": url_foto, "nivelGerencia": nivel_gerencia }}
     else:
         logger.warning(f"Erro ao obter informações. Código de status: {response_meus_dados.status_code}")
         return{"status":"erro"}

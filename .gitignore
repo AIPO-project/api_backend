@@ -21,4 +21,6 @@ aipo_02.sql
 
 *.log
 
+.env_producao
+
 __pycache__/
