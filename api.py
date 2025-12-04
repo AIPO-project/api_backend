@@ -1212,10 +1212,10 @@ def getNumeroUsuariosAtivos():
 @app.route('/login', methods = ['POST'])
 def login():
   api_url = "https://suap.ifrn.edu.br/api/"
-
+  
   try:
     data = request.json
-    response = requests.post(api_url + "v2/autenticacao/token/", json=data)
+    response = requests.post(api_url + "token/pair", json=data)
   except Exception as e:
     logger.warning(str(e))
     return {"status": "falha login", "erro": str(e)}
