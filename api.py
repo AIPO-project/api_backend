@@ -1222,24 +1222,36 @@ def login():
   
   if response.status_code == 200:
     # global token_refresh
-    
     token_refresh_suap = response.json().get("refresh")
     # token_refresh = token_refresh_suap
     token = response.json().get("access")
+
+    ehServidor = False
 
     headers = {
         "Authorization": f'Bearer {token}'
     }
     try:
-      response_meus_dados = requests.get(api_url + "v2/minhas-informacoes/meus-dados/", headers=headers)
+      # response_meus_dados = requests.get(api_url + "rh/meus-dados/", headers=headers)
+      # response_meus_dados = requests.get(api_url + "ensino/meus-dados-aluno/", headers=headers)
     except Exception as e:
       logger.warning(str(e))
-      return {"status": str(e)}
+      ehProfessor = True
+      # return {"status": str(e)}
+
+    if ehServidor :
+      try:
+        response_meus_dados = requests.get(api_url + "rh/meus-dados/", headers=headers)
+        # response_meus_dados = requests.get(api_url + "ensino/meus-dados-aluno/", headers=headers)
+      except Exception as e:
+        logger.warning(str(e))
+        return {"status": str(e)}
 
     if response_meus_dados.status_code == 200:
       logger.debug("Informações do Aluno:")
       # logger.debug(response_meus_dados.json())
       logger.debug("")
+      logger.debug(response_meus_dados.json())
       logger.debug(response_meus_dados.json()["matricula"])
       # logger.debug(response_meus_dados.json()["tipo_vinculo"])
       vinculo = response_meus_dados.json()["vinculo"]
