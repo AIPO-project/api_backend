@@ -170,7 +170,8 @@ def procurarUsuarioSUAP(matricula):
     token = response_refresh.json()["access"]
     # token_refresh = response_refresh.json()["refresh"]
 
-    api_url = "https://suap.ifrn.edu.br/api/edu/dados-aluno-matriculado/?matricula="+matricula
+    # api_url = "https://suap.ifrn.edu.br/api/edu/dados-aluno-matriculado/?matricula="+matricula
+    api_url = "https://suap.ifrn.edu.br/api/ensino/aluno-matriculado/?matricula="+matricula
 
     headers = {
       "Authorization": f'Bearer {token}'
