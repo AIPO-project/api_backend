@@ -1233,11 +1233,14 @@ def login():
     }
     try:
       # response_meus_dados = requests.get(api_url + "rh/meus-dados/", headers=headers)
-      # response_meus_dados = requests.get(api_url + "ensino/meus-dados-aluno/", headers=headers)
+      response_meus_dados = requests.get(api_url + "ensino/meus-dados-aluno/", headers=headers)
     except Exception as e:
       logger.warning(str(e))
-      ehProfessor = True
+      ehServidor = True
       # return {"status": str(e)}
+
+    if response_meus_dados.status_code != "200":
+      ehServidor = True
 
     if ehServidor :
       try:
