@@ -170,7 +170,8 @@ def procurarUsuarioSUAP(matricula):
     token = response_refresh.json()["access"]
     # token_refresh = response_refresh.json()["refresh"]
 
-    api_url = "https://suap.ifrn.edu.br/api/edu/dados-aluno-matriculado/?matricula="+matricula
+    # api_url = "https://suap.ifrn.edu.br/api/edu/dados-aluno-matriculado/?matricula="+matricula
+    api_url = "https://suap.ifrn.edu.br/api/ensino/aluno-matriculado/?matricula="+matricula
 
     headers = {
       "Authorization": f'Bearer {token}'
@@ -1212,34 +1213,49 @@ def getNumeroUsuariosAtivos():
 @app.route('/login', methods = ['POST'])
 def login():
   api_url = "https://suap.ifrn.edu.br/api/"
-
+  
   try:
     data = request.json
-    response = requests.post(api_url + "v2/autenticacao/token/", json=data)
+    response = requests.post(api_url + "token/pair", json=data)
   except Exception as e:
     logger.warning(str(e))
     return {"status": "falha login", "erro": str(e)}
   
   if response.status_code == 200:
     # global token_refresh
-    
     token_refresh_suap = response.json().get("refresh")
     # token_refresh = token_refresh_suap
     token = response.json().get("access")
+
+    ehServidor = False
 
     headers = {
         "Authorization": f'Bearer {token}'
     }
     try:
-      response_meus_dados = requests.get(api_url + "v2/minhas-informacoes/meus-dados/", headers=headers)
+      # response_meus_dados = requests.get(api_url + "rh/meus-dados/", headers=headers)
+      response_meus_dados = requests.get(api_url + "ensino/meus-dados-aluno/", headers=headers)
     except Exception as e:
       logger.warning(str(e))
-      return {"status": str(e)}
+      ehServidor = True
+      # return {"status": str(e)}
+
+    if response_meus_dados.status_code != "200":
+      ehServidor = True
+
+    if ehServidor :
+      try:
+        response_meus_dados = requests.get(api_url + "rh/meus-dados/", headers=headers)
+        # response_meus_dados = requests.get(api_url + "ensino/meus-dados-aluno/", headers=headers)
+      except Exception as e:
+        logger.warning(str(e))
+        return {"status": str(e)}
 
     if response_meus_dados.status_code == 200:
       logger.debug("Informações do Aluno:")
       # logger.debug(response_meus_dados.json())
       logger.debug("")
+      logger.debug(response_meus_dados.json())
       logger.debug(response_meus_dados.json()["matricula"])
       # logger.debug(response_meus_dados.json()["tipo_vinculo"])
       vinculo = response_meus_dados.json()["vinculo"]
