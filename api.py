@@ -13,6 +13,7 @@ import logging
 import os #utilizado para pegar os valores que estão na variável de ambiente
 from dotenv import load_dotenv
 from flask_jwt_extended import create_access_token, JWTManager, jwt_required, get_jwt_identity, get_jwt
+import pushMqtt as push_mqtt
 
 app = Flask(__name__)
 CORS(app)
@@ -48,6 +49,10 @@ app.config['MYSQL_PASSWORD'] = os.getenv("MYSQL_PASSWORD")
 app.config['MYSQL_DB'] = os.getenv("MYSQL_DATABASE")
 app.config['MYSQL_PORT'] = int(os.getenv("MYSQL_PORT"))
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
+app.config["JWT_ALGORITHM"] = "HS256"
+app.config["JWT_ISSUER"] = "aipo-backend"
+app.config["JWT_AUDIENCE"] = "aipo-frontend"
+
 
 jwt = JWTManager(app)
 mysql = MySQL(app)
@@ -1339,3 +1344,7 @@ def login():
     return{"status": "falha_login", "erro" : "falha de comunicação com SUAP"}
 
   return {"status":"ok", "token": token}
+
+if __name__ == "__main__":
+  # push_mqtt.init(app)
+  push_mqtt.start(app)
