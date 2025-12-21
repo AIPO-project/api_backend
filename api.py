@@ -16,7 +16,8 @@ from flask_jwt_extended import create_access_token, JWTManager, jwt_required, ge
 import pushMqtt as push_mqtt
 
 app = Flask(__name__)
-CORS(app)
+# CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 load_dotenv() #carrega as variveis de ambiente
 
 logger = logging.getLogger("AIPO_API")
@@ -52,6 +53,14 @@ app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 app.config["JWT_ALGORITHM"] = "HS256"
 app.config["JWT_ISSUER"] = "aipo-backend"
 app.config["JWT_AUDIENCE"] = "aipo-frontend"
+
+# Faz o JWT-Extended COLOCAR aud no token e VALIDAR aud ao decodificar
+app.config["JWT_ENCODE_AUDIENCE"] = app.config["JWT_AUDIENCE"]
+app.config["JWT_DECODE_AUDIENCE"] = app.config["JWT_AUDIENCE"]
+
+# Faz o JWT-Extended COLOCAR iss no token e VALIDAR iss ao decodificar
+app.config["JWT_ENCODE_ISSUER"] = app.config["JWT_ISSUER"]
+app.config["JWT_DECODE_ISSUER"] = app.config["JWT_ISSUER"]
 
 
 jwt = JWTManager(app)
@@ -1346,5 +1355,5 @@ def login():
   return {"status":"ok", "token": token}
 
 if __name__ == "__main__":
-  # push_mqtt.init(app)
-  push_mqtt.start(app)
+  push_mqtt.init(app)
+  push_mqtt.run_socketio(app)
