@@ -1001,6 +1001,31 @@ def acessos_data():
 
   return {"status":"ok", "numResults": numResults, "Dados": data}
 
+@app.route('/dataAcessos/<id>', methods = ['GET'])
+def getAcessosPorId(id):
+  try:
+    cur = mysql.connection.cursor()
+  except Exception as e:
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+  
+  sql = "SELECT a.timestamp, a.autorizado, s.codigo, s.nome, u.matricula, u.nome FROM usuarios u "
+  sql += "JOIN acessos a ON u.matricula = a.usuario "
+  sql += "JOIN salas s ON a.sala = s.id "
+  sql += "WHERE a.id = '" + id + "'"
+
+  try:
+    cur.execute(sql)
+  except Exception as e:
+    cur.close()
+    logger.warning("falha de acesso ao banco: "+str(e))
+    return {"status":str(e)}
+  
+  columns = [column[0] for column in cur.description]
+  data = [dict(zip(columns, row)) for row in cur.fetchall()]
+
+  return {"status":"ok", "data": data[0]}
+
 # retorna os dados de acessos realizados por um usuário em uma data específica
 @app.route('/dataAcessosPorDataPorUsuario/<user_id>', methods = ['POST'])
 def getDatasAcessosPorUsuarioPorData(user_id):
@@ -1043,6 +1068,7 @@ def getDatasAcessosPorUsuarioPorData(user_id):
   # logger.debug(data)
 
   return {"status":"ok", "data": data}
+
 
 # retornar o número de acessos realizados por um determinado usuário
 @app.route('/acessosPorUsuario/<user_id>', methods = ['POST'])
