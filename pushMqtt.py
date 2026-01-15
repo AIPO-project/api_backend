@@ -21,22 +21,28 @@ _MQTT_TOPIC = os.getenv("MQTT_TOPIC")
 _MQTT_LOGIN = os.getenv("MQTT_LOGIN")
 _MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
 
+# Sala especial (admin + gerente, ou o que o BD definir)
+SYSTEM_WATCHERS_ROOM = "system_watchers"
+
 if _MQTT_LOGIN and _MQTT_PASSWORD:
   _mqtt_client.username_pw_set(_MQTT_LOGIN, _MQTT_PASSWORD)
 
 # -----------------------------
 # Helpers
 # -----------------------------
-def roles_to_rooms(roles):
-  mapping = {
-    "administrador": "admin",
-    "monitoramento": "monitoramento",
-  }
+def _normalize_room(value: str) -> str:
+  # Room names devem ser estáveis, sem espaços e previsíveis.
+  return value.strip().lower().replace(" ", "_")
+# def roles_to_rooms(roles):
+#   mapping = {
+#     "administrador": "admin",
+#     "monitoramento": "monitoramento",
+#   }
 
-  if isinstance(roles, str):
-    roles = [roles]
+#   if isinstance(roles, str):
+#     roles = [roles]
 
-  return [mapping[r] for r in roles if r in mapping]
+#   return [mapping[r] for r in roles if r in mapping]
 
 # -----------------------------
 # API pública do módulo
@@ -89,9 +95,14 @@ def init(app):
 
     username = payload["sub"]
     roles = payload.get("roles", [])
+    print(roles)
 
-    for room in roles_to_rooms(roles["nivelGerencia"]):
-      join_room(room)
+    # for room in roles_to_rooms(roles["nivelGerencia"]):
+    #   join_room(room)
+    user_type_room = _normalize_room(roles["nivelGerencia"])
+
+    if user_type_room in ["gerente", "administrador"]:
+      join_room(SYSTEM_WATCHERS_ROOM)
 
     emit("server_message", {
       "msg": f"Bem-vindo, {username}",
@@ -125,16 +136,16 @@ def init(app):
     event = {"topic": msg.topic, "data": data}
 
     # _socketio.emit(
-    #   "mqtt_message",
+    #   "access_message",
     #   event,
     #   room="monitoramento",
     #   namespace="/"
     # )
 
     _socketio.emit(
-      "mqtt_message",
+      "access_message",
       event,
-      room="admin",
+      room=SYSTEM_WATCHERS_ROOM,
       namespace="/"
     )
 
