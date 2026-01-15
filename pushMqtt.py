@@ -22,7 +22,8 @@ _MQTT_LOGIN = os.getenv("MQTT_LOGIN")
 _MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
 
 # Sala especial (admin + gerente, ou o que o BD definir)
-SYSTEM_WATCHERS_ROOM = "system_watchers"
+ACCESS_EVENTS = "access_events"
+ACCESS_MONITORING = "access_monitoring"
 
 if _MQTT_LOGIN and _MQTT_PASSWORD:
   _mqtt_client.username_pw_set(_MQTT_LOGIN, _MQTT_PASSWORD)
@@ -99,10 +100,13 @@ def init(app):
 
     # for room in roles_to_rooms(roles["nivelGerencia"]):
     #   join_room(room)
+    print("Teste de conexão socket.io")
     user_type_room = _normalize_room(roles["nivelGerencia"])
 
     if user_type_room in ["gerente", "administrador"]:
-      join_room(SYSTEM_WATCHERS_ROOM)
+      join_room(ACCESS_EVENTS)
+    if user_type_room in ["administrador"]:
+      join_room(ACCESS_MONITORING)
 
     emit("server_message", {
       "msg": f"Bem-vindo, {username}",
@@ -135,17 +139,17 @@ def init(app):
 
     event = {"topic": msg.topic, "data": data}
 
-    # _socketio.emit(
-    #   "access_message",
-    #   event,
-    #   room="monitoramento",
-    #   namespace="/"
-    # )
+    _socketio.emit(
+      "access_monitoring",
+      event,
+      room=ACCESS_MONITORING,
+      namespace="/"
+    )
 
     _socketio.emit(
       "access_message",
       event,
-      room=SYSTEM_WATCHERS_ROOM,
+      room=ACCESS_EVENTS,
       namespace="/"
     )
 
