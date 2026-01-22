@@ -3,6 +3,7 @@ import json
 from flask import Flask
 from flask import request
 import requests
+from flask_caching import Cache
 from flask_cors import CORS
 from flask_mysqldb import MySQL
 import serial
@@ -14,6 +15,7 @@ import os #utilizado para pegar os valores que estão na variável de ambiente
 from dotenv import load_dotenv
 from flask_jwt_extended import create_access_token, JWTManager, jwt_required, get_jwt_identity, get_jwt
 import pushMqtt as push_mqtt
+import mysql as my_mysql
 
 app = Flask(__name__)
 # CORS(app)
@@ -62,9 +64,18 @@ app.config["JWT_DECODE_AUDIENCE"] = app.config["JWT_AUDIENCE"]
 app.config["JWT_ENCODE_ISSUER"] = app.config["JWT_ISSUER"]
 app.config["JWT_DECODE_ISSUER"] = app.config["JWT_ISSUER"]
 
+app.config.update({
+    "CACHE_TYPE": "RedisCache",
+    "CACHE_REDIS_HOST": "127.0.0.1",
+    "CACHE_REDIS_PORT": 6379,
+    "CACHE_DEFAULT_TIMEOUT": 5,  # segundos
+})
+cache = Cache(app)
+
 
 jwt = JWTManager(app)
 mysql = MySQL(app)
+my_mysql.init(mysql, logger)
 # token_refresh =""
 
 def log_database(funcaoAPI, usuarioAtingido, descricao):
@@ -955,9 +966,14 @@ def acessos_hoje():
   except Exception as e:
     logger.warning("falha de acesso ao banco: "+str(e))
     return {"status":str(e)}
-
+  
+  # sql = "select * from acessos where DATE(timestamp) = '"+str(today)+" 00:00:00'" 
+  sql = "SELECT DATE(timestamp) dia, COUNT(*) qtd FROM acessos WHERE"
+  sql +=" timestamp >= '"+str(today)+" 00:00:00' AND"
+  sql +=" timestamp <= '"+str(today)+" 23:59:59' GROUP BY dia ORDER BY dia;"
+ 
   try:
-    cur.execute("select * from acessos where DATE(timestamp) = '"+str(today)+"'" )
+    cur.execute(sql)
   except Exception as e:
     cur.close()
     logger.warning(e)
@@ -966,10 +982,12 @@ def acessos_hoje():
   numResults = cur.rowcount
   columns = [column[0] for column in cur.description]
   data = [dict(zip(columns, row)) for row in cur.fetchall()]
-
+  # resultados = cur.fetchall()
+  logger.debug("Odarbia")
+  logger.debug(data[0])
   cur.close()
 
-  return {'numAcessos': numResults, 'acessos': data}
+  return {'numAcessos': data[0]["qtd"], 'acessos': data}
 
 # retorna o número de acessos realizados em uma data específica
 @app.route('/acessosData', methods = ['PUT'])
@@ -1001,6 +1019,75 @@ def acessos_data():
 
   return {"status":"ok", "numResults": numResults, "Dados": data}
 
+@app.route('/dashboard', methods = ['GET'])
+@cache.cached(timeout=1, query_string=True)
+def get_dashboard_data():
+  today = datetime.now().date()
+
+  # hoje = acessos_hoje()
+  logger.debug("Today:")
+  logger.debug(today)
+  
+  sql = "SELECT DATE(timestamp) dia, COUNT(*) qtd FROM acessos WHERE "
+  sql +="timestamp >= '"+str(today)+" 00:00:00' AND "
+  sql +="timestamp <= '"+str(today)+" 23:59:59' GROUP BY dia ORDER BY dia"
+  data = my_mysql.run_select(sql)
+
+  day7 = today - timedelta(days=7)
+  sql = "SELECT DATE(timestamp) dia, COUNT(*) qtd FROM acessos WHERE "
+  sql +="timestamp > '"+str(day7)+" 00:00:00' AND "
+  sql +="timestamp <= '"+str(today)+" 23:59:59' GROUP BY dia ORDER BY dia"
+  semanaPorDia = my_mysql.run_select(sql)
+
+  logger.debug("semanaPorDia")
+  logger.debug(semanaPorDia)  
+
+  sql = "SELECT COUNT(*) AS ultimos_07_dias FROM acessos "
+  sql +="WHERE `timestamp` >= NOW() - INTERVAL 7 DAY"
+  semana = my_mysql.run_select(sql)
+
+  sql = "SELECT COUNT(*) AS ultimos_30_dias FROM acessos "
+  sql +="WHERE `timestamp` >= NOW() - INTERVAL 30 DAY"
+  d30 = my_mysql.run_select(sql)
+
+
+  sql  = " SELECT  MONTH(`timestamp`) AS mes,  COUNT(*) AS qtd FROM acessos "
+  sql += "WHERE `timestamp` >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 11 MONTH), "
+  sql += "'%Y-%m-01') AND `timestamp` <  DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), "
+  sql += "INTERVAL 1 MONTH) GROUP BY MONTH(`timestamp`) ORDER BY MONTH(`timestamp`)"
+  meses = my_mysql.run_select(sql)
+
+
+  day30ago = today - timedelta(days=30)
+  
+  logger.debug("30 dias atrás")
+  logger.debug(day30ago)
+  
+  sql  = "SELECT s.codigo, COUNT(*) qtd FROM acessos a JOIN salas s ON s.id=a.sala "
+  sql += "WHERE a.timestamp >= '"+str(day30ago)+" 00:00:00' AND a.timestamp < '"+str(today)+" 23:59:59' "
+  sql += "GROUP BY s.codigo ORDER BY qtd DESC LIMIT 4"
+
+  logger.debug(sql)
+
+  acessosPorSalas = my_mysql.run_select(sql)
+  # acessosPorSalas = [{"codigo":"", "qtd": 10}]
+
+  logger.debug("acessosPorSalas")
+  logger.debug(acessosPorSalas)
+
+  # dias = 
+  return {
+    'numAcessosHoje': data[0]["qtd"],
+    'numAcessosSemana': semana[0]["ultimos_07_dias"],
+    'numAcessos30Dias':d30[0]['ultimos_30_dias'],
+    'numAcessosPorMes': meses, 
+    'numAcessosPorSemana':semanaPorDia,
+    # 'numAcessosPorSala':[{"codigo":"top", "qtd": 10}]
+    'numAcessosPorSala':acessosPorSalas
+  }
+  #return {'numAcessos': data[0]["qtd"], 'semana': semana[0]["ultimos_07_dias"], 'meses': "0", 'd30':"0"}
+
+# retorna o acesso realizado de acordo com um identificador
 @app.route('/dataAcessos/<id>', methods = ['GET'])
 def getAcessosPorId(id):
   try:
