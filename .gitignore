@@ -24,3 +24,5 @@ aipo_02.sql
 .env_producao
 
 __pycache__/
+
+*.bkp
