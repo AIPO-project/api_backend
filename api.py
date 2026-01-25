@@ -14,6 +14,8 @@ import os #utilizado para pegar os valores que estão na variável de ambiente
 from dotenv import load_dotenv
 from flask_jwt_extended import create_access_token, JWTManager, jwt_required, get_jwt_identity, get_jwt
 
+import mysql as my_mysql
+
 app = Flask(__name__)
 CORS(app)
 load_dotenv() #carrega as variveis de ambiente
@@ -51,6 +53,7 @@ app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
 jwt = JWTManager(app)
 mysql = MySQL(app)
+my_mysql.init(mysql, logger)
 # token_refresh =""
 
 def log_database(funcaoAPI, usuarioAtingido, descricao):
@@ -1208,6 +1211,28 @@ def getNumeroUsuariosAtivos():
   users = [dict(zip(columns, row)) for row in cur.fetchall()]
 
   return {"status":"ok", "users":users}
+
+# retorna o histórico de acessos
+@app.route('/getHistoricoAcessos', methods = ['GET'])
+@jwt_required()
+def getHistoricoAcessos():
+
+  sql = "SELECT"
+  sql+= "  a.timestamp,"
+  sql+= "  a.autorizado,"
+  sql+= "  s.codigo   AS sala_codigo,"
+  sql+= "  s.nome     AS sala_nome,"
+  sql+= "  u.matricula AS usuario_matricula,"
+  sql+= "  u.nome     AS usuario_nome"
+  sql+= " FROM acessos a"
+  sql+= " JOIN salas s    ON s.id = a.sala"
+  sql+= " JOIN usuarios u ON u.matricula = a.usuario"
+  sql+= " where a.timestamp >= (now() - INTERVAL 7 DAY)"
+  sql+= " ORDER BY a.timestamp DESC"
+
+  resultado = my_mysql.run_select(sql)
+
+  return {"status":"ok", "data":resultado}
 
 # função para realizar login no sistema
 @app.route('/login', methods = ['POST'])
