@@ -1213,9 +1213,11 @@ def getNumeroUsuariosAtivos():
   return {"status":"ok", "users":users}
 
 # retorna o histórico de acessos
-@app.route('/getHistoricoAcessos', methods = ['GET'])
+@app.route('/getHistoricoAcessos', methods = ['POST'])
 @jwt_required()
 def getHistoricoAcessos():
+  data_inicial = request.json["data_inicial"]
+  data_final = request.json["data_final"]
 
   sql = "SELECT"
   sql+= "  a.timestamp,"
@@ -1227,7 +1229,10 @@ def getHistoricoAcessos():
   sql+= " FROM acessos a"
   sql+= " JOIN salas s    ON s.id = a.sala"
   sql+= " JOIN usuarios u ON u.matricula = a.usuario"
-  sql+= " where a.timestamp >= (now() - INTERVAL 7 DAY)"
+  # sql+= " where a.timestamp >= (now() - INTERVAL 7 DAY)"
+  sql+= " where"
+  sql +=" a.timestamp >= '"+str(data_inicial)+" 00:00:00' AND"
+  sql +=" a.timestamp <= '"+str(data_final)+" 23:59:59'"
   sql+= " ORDER BY a.timestamp DESC"
 
   resultado = my_mysql.run_select(sql)
