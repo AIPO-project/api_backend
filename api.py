@@ -1216,12 +1216,9 @@ def getNumeroUsuariosAtivos():
 @app.route('/getHistoricoAcessos', methods = ['POST'])
 @jwt_required()
 def getHistoricoAcessos():
-
-  logger.debug("Datas:")
+  
   data_inicial = request.json["data_inicial"]
   data_final = request.json["data_final"]
-  logger.debug(data_inicial)
-  logger.debug(data_final)
 
   sql = "SELECT"
   sql+= "  a.timestamp,"
