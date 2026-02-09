@@ -1030,26 +1030,25 @@ def get_dashboard_data():
   logger.debug("Today:")
   logger.debug(today)
   
-  sql = "SELECT DATE(timestamp) dia, COUNT(*) qtd FROM acessos WHERE "
-  sql +="timestamp >= '"+str(today)+" 00:00:00' AND "
-  sql +="timestamp <= '"+str(today)+" 23:59:59' GROUP BY dia ORDER BY dia"
-  data = my_mysql.run_select(sql)
+  sql = "SELECT COUNT(*) AS acessos_hoje "
+  sql += "FROM acessos "
+  sql += "WHERE `timestamp` = CURDATE()"
+  diaHoje= my_mysql.run_select(sql)
 
-  day7 = today - timedelta(days=7)
   sql = "SELECT DATE(timestamp) dia, COUNT(*) qtd FROM acessos WHERE "
-  sql +="timestamp > '"+str(day7)+" 00:00:00' AND "
-  sql +="timestamp <= '"+str(today)+" 23:59:59' GROUP BY dia ORDER BY dia"
+  sql +="timestamp > CURDATE() - INTERVAL 7 DAY AND "
+  sql +="timestamp <= CURDATE() GROUP BY dia ORDER BY dia"
   semanaPorDia = my_mysql.run_select(sql)
 
   logger.debug("semanaPorDia")
   logger.debug(semanaPorDia)  
 
   sql = "SELECT COUNT(*) AS ultimos_07_dias FROM acessos "
-  sql +="WHERE `timestamp` >= NOW() - INTERVAL 7 DAY"
+  sql +="WHERE `timestamp` >= CURDATE() - INTERVAL 7 DAY"
   semana = my_mysql.run_select(sql)
 
   sql = "SELECT COUNT(*) AS ultimos_30_dias FROM acessos "
-  sql +="WHERE `timestamp` >= NOW() - INTERVAL 30 DAY"
+  sql +="WHERE `timestamp` >= CURDATE() - INTERVAL 30 DAY"
   d30 = my_mysql.run_select(sql)
 
 
@@ -1079,7 +1078,7 @@ def get_dashboard_data():
 
   # dias = 
   return {
-    'numAcessosHoje': data[0]["qtd"],
+    'numAcessosHoje': diaHoje[0]["acessos_hoje"],
     'numAcessosSemana': semana[0]["ultimos_07_dias"],
     'numAcessos30Dias':d30[0]['ultimos_30_dias'],
     'numAcessosPorMes': meses, 
