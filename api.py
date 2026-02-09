@@ -1032,19 +1032,23 @@ def get_dashboard_data():
   
   sql = "SELECT COUNT(*) AS acessos_hoje "
   sql += "FROM acessos "
-  sql += "WHERE `timestamp` = CURDATE()"
+  sql += "WHERE `timestamp` >= CURDATE() "
+  sql += "AND `timestamp` < CURDATE() + INTERVAL 1 DAY"
   diaHoje= my_mysql.run_select(sql)
 
+  logger.debug("dia hoje")
+  logger.debug(diaHoje)
+
   sql = "SELECT DATE(timestamp) dia, COUNT(*) qtd FROM acessos WHERE "
-  sql +="timestamp > CURDATE() - INTERVAL 7 DAY AND "
-  sql +="timestamp <= CURDATE() GROUP BY dia ORDER BY dia"
+  sql +="timestamp >= CURDATE() - INTERVAL 6 DAY AND "
+  sql +="timestamp < CURDATE() + INTERVAL 1 DAY GROUP BY dia ORDER BY dia"
   semanaPorDia = my_mysql.run_select(sql)
 
   logger.debug("semanaPorDia")
   logger.debug(semanaPorDia)  
 
   sql = "SELECT COUNT(*) AS ultimos_07_dias FROM acessos "
-  sql +="WHERE `timestamp` >= CURDATE() - INTERVAL 7 DAY"
+  sql +="WHERE `timestamp` >= CURDATE() - INTERVAL 6 DAY"
   semana = my_mysql.run_select(sql)
 
   sql = "SELECT COUNT(*) AS ultimos_30_dias FROM acessos "
