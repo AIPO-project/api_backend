@@ -54,6 +54,9 @@ app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 jwt = JWTManager(app)
 mysql = MySQL(app)
 my_mysql.init(mysql, logger)
+
+from mqtt_access import create_mqtt_blueprint
+app.register_blueprint(create_mqtt_blueprint(mysql))
 # token_refresh =""
 
 def log_database(funcaoAPI, usuarioAtingido, descricao):
